@@ -1,0 +1,280 @@
+// define variables for each deployable module
+def repoPath
+def isDBExisting = true
+def isAvlblOpExisting = true
+def isSplyDmndOpExisting = true
+def areAllServicesExisting = true
+def runCDK = false
+
+// define variables for parameters
+def splyDmndOpResConc
+def splyDmndOpProvConc
+def avlOpResConc
+def avlOpProvConc
+def totalConcurrencyLimit = 360
+
+pipeline {
+    agent any
+
+    environment {
+        MODULE_NAME = 'InventoryModule'
+    }
+
+    stages {
+		stage('validateInput') {
+            steps {
+				script {
+					splyDmndOpResConc = params['Supply Demand Op Reserved Concurrency'].toInteger()
+					splyDmndOpProvConc = params['Supply Demand Op Provisioned Concurrency'].toInteger()
+					avlOpResConc = params['Availability Op Reserved Concurrency'].toInteger()
+					avlOpProvConc = params['Availability Op Provisioned Concurrency'].toInteger()
+					
+					checkConcurrency(splyDmndOpResConc, splyDmndOpProvConc, 'Consume Demand')
+					checkConcurrency(avlOpResConc, avlOpProvConc, 'Get Availability')					
+					checkOverallReservedConcurrency(splyDmndOpResConc, avlOpResConc, totalConcurrencyLimit)
+				}
+            }
+        }
+	
+		stage('verifyAndExpandBuildPackagePresent') {
+            steps {
+				script {
+					def buildPackage = params['Build Package Name']
+					def buildPackagePath = "/home/ec2-user/buildArtifacts/" + buildPackage
+					repoPath = "/home/ec2-user/deploymentWorkspace/"
+					if (!fileExists(buildPackagePath)) {
+						error('Build package not found!')
+					} else {
+						sh """
+							rm -rf ${repoPath}/*
+							unzip -q ${buildPackagePath} -d ${repoPath}/
+						"""
+					}
+				}
+            }
+        }
+		
+		stage('checkToCreateOrUpdateService') {
+            steps {
+				script {
+					def scriptPath = "${repoPath}/modules/InventoryModule/Database/_scripts/checkExisting.sh"
+					isDBExisting = checkIfExisting(scriptPath)
+					areAllServicesExisting = areAllServicesExisting && isDBExisting
+					
+					scriptPath = "${repoPath}/modules/InventoryModule/AvailabilityOp/_scripts/checkExisting.sh"
+					isAvlblOpExisting = checkIfExisting(scriptPath)
+					areAllServicesExisting = areAllServicesExisting && isAvlblOpExisting
+					
+					scriptPath = "${repoPath}/modules/InventoryModule/SupplyDemandOp/_scripts/checkExisting.sh"
+					isSplyDmndOpExisting = checkIfExisting(scriptPath)
+					areAllServicesExisting = areAllServicesExisting && isSplyDmndOpExisting
+					
+					if (params['Deploy Inventory Module']) {
+						runCDK = true
+					}
+				}
+            }
+        }
+		
+        stage('PreDeploy') {
+            steps {
+				script {					
+					if(!areAllServicesExisting && runCDK) {
+						echo "PreDeploy step"
+						
+						def mainScriptPath = "${repoPath}/modules/InventoryModule/_scripts/preDeploy.sh"
+						echo "Executing ${mainScriptPath}"
+						sh "${mainScriptPath}"
+						
+						if (runCDK && !isDBExisting) {
+							def scriptPath = "${repoPath}/modules/InventoryModule/Database/_scripts/preDeploy.sh"
+							if (fileExists(scriptPath)) {
+								echo "Executing ${scriptPath}"
+								sh "${scriptPath}"
+							}
+						}
+	
+						if (runCDK && !isAvlblOpExisting) {
+							def scriptPath = "${repoPath}/modules/InventoryModule/AvailabilityOp/_scripts/preDeploy.sh"
+							if (fileExists(scriptPath)) {
+								echo "Executing ${scriptPath}"
+								sh "${scriptPath}"
+							}
+						}
+						
+						if (runCDK && !isSplyDmndOpExisting) {
+							def scriptPath = "${repoPath}/modules/InventoryModule/SupplyDemandOp/_scripts/preDeploy.sh"
+							if (fileExists(scriptPath)) {
+								echo "Executing ${scriptPath}"
+								sh "${scriptPath}"
+							}
+						}
+						
+						echo "PreDeploy step complete"
+					}
+                }
+            }
+        }
+
+        stage('DeployNewServices') {
+            steps {
+				script {
+					if(!areAllServicesExisting || runCDK) {
+						echo "Deploy step"
+						
+						def mainScriptPath = "${repoPath}/modules/InventoryModule/_scripts/deploy.sh"
+						echo "Executing ${mainScriptPath}"						
+						sh "${mainScriptPath} \"${splyDmndOpResConc}\" \"${splyDmndOpProvConc}\" \"${avlOpResConc}\" \"${avlOpProvConc}\""
+						
+						echo "Deploy step complete"
+					}
+                }
+            }
+        }
+		
+		stage('initDB') {
+            steps {
+				script {
+					if(!isDBExisting) {
+						echo "Initialize DB step start"
+						
+						def scriptPath = "${repoPath}/modules/InventoryModule/Database/_scripts/initDeployment.sh"
+						echo "Executing ${scriptPath}"
+						sh "${scriptPath}"
+						
+						echo "Initialize DB step complete"
+					}
+                }
+            }
+        }
+		
+		stage('PostDeploy') {
+            steps {
+                script {
+					if(!areAllServicesExisting && runCDK) {
+					
+						echo "Post Deploy step"
+					
+						def mainScriptPath = "${repoPath}/modules/InventoryModule/_scripts/postDeploy.sh"
+						echo "Executing ${mainScriptPath}"
+						sh "${mainScriptPath}"
+						
+						if (runCDK && !isDBExisting) {
+							def scriptPath = "${repoPath}/modules/InventoryModule/Database/_scripts/postDeploy.sh"
+							if (fileExists(scriptPath)) {
+								echo "Executing ${scriptPath}"
+								sh "${scriptPath}"
+							}
+						}
+	
+						if (runCDK && !isAvlblOpExisting) {
+							def scriptPath = "${repoPath}/modules/InventoryModule/AvailabilityOp/_scripts/postDeploy.sh"
+							if (fileExists(scriptPath)) {
+								echo "Executing ${scriptPath}"
+								sh "${scriptPath}"
+							}
+						}
+						
+						if (runCDK && !isSplyDmndOpExisting) {
+							def scriptPath = "${repoPath}/modules/InventoryModule/SupplyDemandOp/_scripts/postDeploy.sh"
+							if (fileExists(scriptPath)) {
+								echo "Executing ${scriptPath}"
+								sh "${scriptPath}"
+							}
+						}
+						
+						echo "Post Deploy step complete"
+					}
+                }
+            }
+        }
+		
+		stage('UpdateExistingServices') {
+            steps {
+				script {
+					echo "Update services start"
+					
+					if (params['Update Database service'] && isDBExisting && params['Database Changes']=="Update") {
+						def scriptPath = "${repoPath}/modules/InventoryModule/Database/_scripts/updateDeployment.sh"
+						if (fileExists(scriptPath)) {
+							echo "Executing ${scriptPath}"
+							sh "${scriptPath} \"${params['Database Changes']}\""
+						}
+					}
+	
+					if (params['Update Availability Op service'] && isAvlblOpExisting) {
+						def scriptPath = "${repoPath}/modules/InventoryModule/AvailabilityOp/_scripts/updateDeployment.sh"
+						if (fileExists(scriptPath)) {
+							echo "Executing ${scriptPath}"
+							sh "${scriptPath} \"${cnsDmndResConc}\" \"${cnsDmndProvConc}\""
+						}
+					}
+					
+					if (params['Update Supply Demand Op service'] && isSplyDmndOpExisting) {
+						def scriptPath = "${repoPath}/modules/InventoryModule/SupplyDemandOp/_scripts/updateDeployment.sh"
+						if (fileExists(scriptPath)) {
+							echo "Executing ${scriptPath}"
+							sh "${scriptPath} \"${getAvlResConc}\" \"${getAvlProvConc}\""
+						}
+					}
+					
+					echo "Update services complete"
+                }
+            }
+        }
+		
+		stage('Test') {
+            steps {
+                script {
+					echo "Test step start"
+	
+					if (params['Test Supply Demand Op service']) {
+						def scriptPath = "${repoPath}/modules/InventoryModule/SupplyDemandOp/_scripts/test.sh"
+						if (fileExists(scriptPath)) {
+							echo "Executing ${scriptPath}"
+							sh "${scriptPath}"
+						}
+					}
+					
+					if (params['Test Availability Op service']) {
+						def scriptPath = "${repoPath}/modules/InventoryModule/AvailabilityOp/_scripts/test.sh"
+						if (fileExists(scriptPath)) {
+							echo "Executing ${scriptPath}"
+							sh "${scriptPath}"
+						}
+					}					
+					
+					echo "Test step complete"
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Pipeline completed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed.'
+        }
+    }
+}
+
+def checkIfExisting(String scriptPath) {
+	echo "Executing ${scriptPath}"
+	def isServExisting = sh(script: "${scriptPath}", returnStatus: true)
+	return isServExisting
+}
+
+def checkConcurrency(int reservedConc, int provConc, String subModuleName) {
+	if (provConc > reservedConc) {
+		error(subModuleName + ': provisioned concurrency greater than reserved concurrency')
+	}
+}
+
+def checkOverallReservedConcurrency(splyDmndOpResConc, avlOpResConc, totalConcurrencyLimit) {
+	def totalConcurrency = splyDmndOpResConc + avlOpResConc
+	if(totalConcurrency > totalConcurrencyLimit) {
+		error('Sum of reserved concurrency for all modules should not exceed ' + totalConcurrencyLimit)
+	}
+}

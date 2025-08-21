@@ -1,0 +1,31 @@
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+	<changeSet id="202508181000-1" author="user">
+		<createTable tableName="CustomerContact">
+			<column name="orderno" type="varchar(40)">
+				<constraints nullable="false" />
+			</column>
+			<column name="salutation" type="varchar(3)">
+				<constraints nullable="false" />
+			</column>
+			<column name="firstName" type="varchar(16)">
+				<constraints nullable="false" />
+			</column>
+			<column name="lastName" type="varchar(16)">
+				<constraints nullable="false" />
+			</column>
+			<column name="phone" type="varchar(16)">
+				<constraints nullable="false" />
+			</column>
+			<column name="email" type="varchar(16)">
+				<constraints nullable="false" />
+			</column>
+			<column name="customerkey" type="varchar(32)">
+				<constraints primaryKey="true" nullable="false" />
+			</column>
+		</createTable>
+		<createIndex indexName="customercontact_ind1" tableName="CustomerContact">
+			<column name="orderno"/>
+		</createIndex>
+   </changeSet>
+</databaseChangeLog>

@@ -1,0 +1,356 @@
+<?xml version='1.1' encoding='UTF-8'?>
+<flow-definition plugin="workflow-job@1540.v295eccc9778f">
+  <actions>
+    <org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobAction plugin="pipeline-model-definition@2.2255.v56a_15e805f12"/>
+    <org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobPropertyTrackerAction plugin="pipeline-model-definition@2.2255.v56a_15e805f12">
+      <jobProperties/>
+      <triggers/>
+      <parameters/>
+      <options/>
+    </org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobPropertyTrackerAction>
+  </actions>
+  <description>ECOM build</description>
+  <keepDependencies>false</keepDependencies>
+  <properties>
+    <org.jenkinsci.plugins.workflow.job.properties.DisableConcurrentBuildsJobProperty>
+      <abortPrevious>false</abortPrevious>
+    </org.jenkinsci.plugins.workflow.job.properties.DisableConcurrentBuildsJobProperty>
+    <hudson.model.ParametersDefinitionProperty>
+      <parameterDefinitions>
+        <hudson.model.StringParameterDefinition>
+          <name>Build Package Name</name>
+          <trim>false</trim>
+        </hudson.model.StringParameterDefinition>
+        <org.biouno.unochoice.DynamicReferenceParameter plugin="uno-choice@2.8.8">
+          <name></name>
+          <randomName>choice-parameter-7620214171090</randomName>
+          <visibleItemCount>1</visibleItemCount>
+          <script class="org.biouno.unochoice.model.GroovyScript">
+            <secureScript plugin="script-security@1373.vb_b_4a_a_c26fa_00">
+              <script>return &quot;&lt;hr style=&apos;border: 1px solid #ccc; margin: 5px 0;&apos;&gt;&quot;</script>
+              <sandbox>true</sandbox>
+            </secureScript>
+            <secureFallbackScript plugin="script-security@1373.vb_b_4a_a_c26fa_00">
+              <script></script>
+              <sandbox>true</sandbox>
+            </secureFallbackScript>
+          </script>
+          <projectName>Deploy_ECOM_InventoryModule</projectName>
+          <projectFullName>Deploy_ECOM_InventoryModule</projectFullName>
+          <parameters class="linked-hash-map"/>
+          <referencedParameters></referencedParameters>
+          <choiceType>ET_FORMATTED_HTML</choiceType>
+          <omitValueField>false</omitValueField>
+        </org.biouno.unochoice.DynamicReferenceParameter>
+        <org.biouno.unochoice.DynamicReferenceParameter plugin="uno-choice@2.8.8">
+          <name></name>
+          <randomName>choice-parameter-341330091857100</randomName>
+          <visibleItemCount>1</visibleItemCount>
+          <script class="org.biouno.unochoice.model.GroovyScript">
+            <secureScript plugin="script-security@1373.vb_b_4a_a_c26fa_00">
+              <script>
+return &quot;&quot;&quot;&lt;div style=&apos;text-align: center; font-weight: bold; font-size: 16px;&apos;&gt;Deployment options&lt;/div&gt;&quot;&quot;&quot;
+</script>
+              <sandbox>true</sandbox>
+            </secureScript>
+            <secureFallbackScript plugin="script-security@1373.vb_b_4a_a_c26fa_00">
+              <script></script>
+              <sandbox>true</sandbox>
+            </secureFallbackScript>
+          </script>
+          <projectName>Deploy_ECOM_InventoryModule</projectName>
+          <projectFullName>Deploy_ECOM_InventoryModule</projectFullName>
+          <parameters class="linked-hash-map"/>
+          <referencedParameters></referencedParameters>
+          <choiceType>ET_FORMATTED_HTML</choiceType>
+          <omitValueField>false</omitValueField>
+        </org.biouno.unochoice.DynamicReferenceParameter>
+        <org.biouno.unochoice.DynamicReferenceParameter plugin="uno-choice@2.8.8">
+          <name></name>
+          <randomName>choice-parameter-341330091857100</randomName>
+          <visibleItemCount>1</visibleItemCount>
+          <script class="org.biouno.unochoice.model.GroovyScript">
+            <secureScript plugin="script-security@1373.vb_b_4a_a_c26fa_00">
+              <script>return &quot;&lt;hr style=&apos;border: 1px solid #ccc; margin: 5px 0;&apos;&gt;&quot;</script>
+              <sandbox>true</sandbox>
+            </secureScript>
+            <secureFallbackScript plugin="script-security@1373.vb_b_4a_a_c26fa_00">
+              <script></script>
+              <sandbox>true</sandbox>
+            </secureFallbackScript>
+          </script>
+          <projectName>Deploy_ECOM_InventoryModule</projectName>
+          <projectFullName>Deploy_ECOM_InventoryModule</projectFullName>
+          <parameters class="linked-hash-map"/>
+          <referencedParameters></referencedParameters>
+          <choiceType>ET_FORMATTED_HTML</choiceType>
+          <omitValueField>false</omitValueField>
+        </org.biouno.unochoice.DynamicReferenceParameter>
+        <hudson.model.BooleanParameterDefinition>
+          <name>Deploy Inventory Module</name>
+          <defaultValue>true</defaultValue>
+        </hudson.model.BooleanParameterDefinition>
+        <hudson.model.BooleanParameterDefinition>
+          <name>Update Database service</name>
+          <defaultValue>false</defaultValue>
+        </hudson.model.BooleanParameterDefinition>
+        <hudson.model.BooleanParameterDefinition>
+          <name>Update Supply Demand Op service</name>
+          <defaultValue>false</defaultValue>
+        </hudson.model.BooleanParameterDefinition>
+        <hudson.model.BooleanParameterDefinition>
+          <name>Update Availability Op service</name>
+          <defaultValue>false</defaultValue>
+        </hudson.model.BooleanParameterDefinition>
+        <org.biouno.unochoice.DynamicReferenceParameter plugin="uno-choice@2.8.8">
+          <name></name>
+          <randomName>choice-parameter-341330091857100</randomName>
+          <visibleItemCount>1</visibleItemCount>
+          <script class="org.biouno.unochoice.model.GroovyScript">
+            <secureScript plugin="script-security@1373.vb_b_4a_a_c26fa_00">
+              <script>return &quot;&lt;hr style=&apos;border: 1px solid #ccc; margin: 5px 0;&apos;&gt;&quot;</script>
+              <sandbox>true</sandbox>
+            </secureScript>
+            <secureFallbackScript plugin="script-security@1373.vb_b_4a_a_c26fa_00">
+              <script></script>
+              <sandbox>true</sandbox>
+            </secureFallbackScript>
+          </script>
+          <projectName>Deploy_ECOM_InventoryModule</projectName>
+          <projectFullName>Deploy_ECOM_InventoryModule</projectFullName>
+          <parameters class="linked-hash-map"/>
+          <referencedParameters></referencedParameters>
+          <choiceType>ET_FORMATTED_HTML</choiceType>
+          <omitValueField>false</omitValueField>
+        </org.biouno.unochoice.DynamicReferenceParameter>
+        <org.biouno.unochoice.DynamicReferenceParameter plugin="uno-choice@2.8.8">
+          <name></name>
+          <randomName>choice-parameter-341330091857100</randomName>
+          <visibleItemCount>1</visibleItemCount>
+          <script class="org.biouno.unochoice.model.GroovyScript">
+            <secureScript plugin="script-security@1373.vb_b_4a_a_c26fa_00">
+              <script>return &quot;&quot;&quot;&lt;div style=&apos;text-align: center; font-weight: bold; font-size: 16px;&apos;&gt;Configuration&lt;/div&gt;&quot;&quot;&quot;
+</script>
+              <sandbox>true</sandbox>
+            </secureScript>
+            <secureFallbackScript plugin="script-security@1373.vb_b_4a_a_c26fa_00">
+              <script></script>
+              <sandbox>true</sandbox>
+            </secureFallbackScript>
+          </script>
+          <projectName>Deploy_ECOM_InventoryModule</projectName>
+          <projectFullName>Deploy_ECOM_InventoryModule</projectFullName>
+          <parameters class="linked-hash-map"/>
+          <referencedParameters></referencedParameters>
+          <choiceType>ET_FORMATTED_HTML</choiceType>
+          <omitValueField>false</omitValueField>
+        </org.biouno.unochoice.DynamicReferenceParameter>
+        <org.biouno.unochoice.DynamicReferenceParameter plugin="uno-choice@2.8.8">
+          <name></name>
+          <randomName>choice-parameter-341330091857100</randomName>
+          <visibleItemCount>1</visibleItemCount>
+          <script class="org.biouno.unochoice.model.GroovyScript">
+            <secureScript plugin="script-security@1373.vb_b_4a_a_c26fa_00">
+              <script>return &quot;&lt;hr style=&apos;border: 1px solid #ccc; margin: 5px 0;&apos;&gt;&quot;</script>
+              <sandbox>true</sandbox>
+            </secureScript>
+            <secureFallbackScript plugin="script-security@1373.vb_b_4a_a_c26fa_00">
+              <script></script>
+              <sandbox>true</sandbox>
+            </secureFallbackScript>
+          </script>
+          <projectName>Deploy_ECOM_InventoryModule</projectName>
+          <projectFullName>Deploy_ECOM_InventoryModule</projectFullName>
+          <parameters class="linked-hash-map"/>
+          <referencedParameters></referencedParameters>
+          <choiceType>ET_FORMATTED_HTML</choiceType>
+          <omitValueField>false</omitValueField>
+        </org.biouno.unochoice.DynamicReferenceParameter>
+        <hudson.model.ChoiceParameterDefinition>
+          <name>Database Type</name>
+          <choices class="java.util.Arrays$ArrayList">
+            <a class="string-array">
+              <string>Aurora Postgres</string>
+            </a>
+          </choices>
+        </hudson.model.ChoiceParameterDefinition>
+        <hudson.model.ChoiceParameterDefinition>
+          <name>Database Changes</name>
+          <choices class="java.util.Arrays$ArrayList">
+            <a class="string-array">
+              <string>None</string>
+              <string>Update</string>
+            </a>
+          </choices>
+        </hudson.model.ChoiceParameterDefinition>
+        <hudson.model.ChoiceParameterDefinition>
+          <name>Read replica Count</name>
+          <description>Applicable for Aurora DB</description>
+          <choices class="java.util.Arrays$ArrayList">
+            <a class="string-array">
+              <string>0</string>
+              <string>1</string>
+              <string>2</string>
+              <string>3</string>
+            </a>
+          </choices>
+        </hudson.model.ChoiceParameterDefinition>
+        <org.biouno.unochoice.DynamicReferenceParameter plugin="uno-choice@2.8.8">
+          <name></name>
+          <randomName>choice-parameter-341330091857100</randomName>
+          <visibleItemCount>1</visibleItemCount>
+          <script class="org.biouno.unochoice.model.GroovyScript">
+            <secureScript plugin="script-security@1373.vb_b_4a_a_c26fa_00">
+              <script>return &quot;&lt;hr style=&apos;border: 1px solid #ccc; margin: 5px 0;&apos;&gt;&quot;</script>
+              <sandbox>true</sandbox>
+            </secureScript>
+            <secureFallbackScript plugin="script-security@1373.vb_b_4a_a_c26fa_00">
+              <script></script>
+              <sandbox>true</sandbox>
+            </secureFallbackScript>
+          </script>
+          <projectName>Deploy_ECOM_InventoryModule</projectName>
+          <projectFullName>Deploy_ECOM_InventoryModule</projectFullName>
+          <parameters class="linked-hash-map"/>
+          <referencedParameters></referencedParameters>
+          <choiceType>ET_FORMATTED_HTML</choiceType>
+          <omitValueField>false</omitValueField>
+        </org.biouno.unochoice.DynamicReferenceParameter>
+        <hudson.model.StringParameterDefinition>
+          <name>Supply Demand Op Reserved Concurrency</name>
+          <defaultValue>0</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>Supply Demand Op Provisioned Concurrency</name>
+          <defaultValue>0</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <org.biouno.unochoice.DynamicReferenceParameter plugin="uno-choice@2.8.8">
+          <name></name>
+          <randomName>choice-parameter-341870573272400</randomName>
+          <visibleItemCount>1</visibleItemCount>
+          <script class="org.biouno.unochoice.model.GroovyScript">
+            <secureScript plugin="script-security@1373.vb_b_4a_a_c26fa_00">
+              <script>return &quot;&lt;hr style=&apos;border: 1px solid #ccc; margin: 5px 0;&apos;&gt;&quot;</script>
+              <sandbox>true</sandbox>
+            </secureScript>
+            <secureFallbackScript plugin="script-security@1373.vb_b_4a_a_c26fa_00">
+              <script></script>
+              <sandbox>true</sandbox>
+            </secureFallbackScript>
+          </script>
+          <projectName>Deploy_ECOM_InventoryModule</projectName>
+          <projectFullName>Deploy_ECOM_InventoryModule</projectFullName>
+          <parameters class="linked-hash-map"/>
+          <referencedParameters></referencedParameters>
+          <choiceType>ET_FORMATTED_HTML</choiceType>
+          <omitValueField>false</omitValueField>
+        </org.biouno.unochoice.DynamicReferenceParameter>
+        <hudson.model.StringParameterDefinition>
+          <name>Availability Op Reserved Concurrency</name>
+          <defaultValue>0</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>Availability Op Provisioned Concurrency</name>
+          <defaultValue>0</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+        <org.biouno.unochoice.DynamicReferenceParameter plugin="uno-choice@2.8.8">
+          <name></name>
+          <randomName>choice-parameter-341870577510700</randomName>
+          <visibleItemCount>1</visibleItemCount>
+          <script class="org.biouno.unochoice.model.GroovyScript">
+            <secureScript plugin="script-security@1373.vb_b_4a_a_c26fa_00">
+              <script>return &quot;&lt;hr style=&apos;border: 1px solid #ccc; margin: 5px 0;&apos;&gt;&quot;</script>
+              <sandbox>true</sandbox>
+            </secureScript>
+            <secureFallbackScript plugin="script-security@1373.vb_b_4a_a_c26fa_00">
+              <script></script>
+              <sandbox>true</sandbox>
+            </secureFallbackScript>
+          </script>
+          <projectName>Deploy_ECOM_InventoryModule</projectName>
+          <projectFullName>Deploy_ECOM_InventoryModule</projectFullName>
+          <parameters class="linked-hash-map"/>
+          <referencedParameters></referencedParameters>
+          <choiceType>ET_FORMATTED_HTML</choiceType>
+          <omitValueField>false</omitValueField>
+        </org.biouno.unochoice.DynamicReferenceParameter>
+        <org.biouno.unochoice.DynamicReferenceParameter plugin="uno-choice@2.8.8">
+          <name></name>
+          <randomName>choice-parameter-341870577510700</randomName>
+          <visibleItemCount>1</visibleItemCount>
+          <script class="org.biouno.unochoice.model.GroovyScript">
+            <secureScript plugin="script-security@1373.vb_b_4a_a_c26fa_00">
+              <script>return &quot;&quot;&quot;&lt;div style=&apos;text-align: center; font-weight: bold; font-size: 16px;&apos;&gt;Test Options&lt;/div&gt;&quot;&quot;&quot;</script>
+              <sandbox>true</sandbox>
+            </secureScript>
+            <secureFallbackScript plugin="script-security@1373.vb_b_4a_a_c26fa_00">
+              <script></script>
+              <sandbox>true</sandbox>
+            </secureFallbackScript>
+          </script>
+          <projectName>Deploy_ECOM_InventoryModule</projectName>
+          <projectFullName>Deploy_ECOM_InventoryModule</projectFullName>
+          <parameters class="linked-hash-map"/>
+          <referencedParameters></referencedParameters>
+          <choiceType>ET_FORMATTED_HTML</choiceType>
+          <omitValueField>false</omitValueField>
+        </org.biouno.unochoice.DynamicReferenceParameter>
+        <org.biouno.unochoice.DynamicReferenceParameter plugin="uno-choice@2.8.8">
+          <name></name>
+          <randomName>choice-parameter-341870577510700</randomName>
+          <visibleItemCount>1</visibleItemCount>
+          <script class="org.biouno.unochoice.model.GroovyScript">
+            <secureScript plugin="script-security@1373.vb_b_4a_a_c26fa_00">
+              <script>return &quot;&lt;hr style=&apos;border: 1px solid #ccc; margin: 5px 0;&apos;&gt;&quot;</script>
+              <sandbox>true</sandbox>
+            </secureScript>
+            <secureFallbackScript plugin="script-security@1373.vb_b_4a_a_c26fa_00">
+              <script></script>
+              <sandbox>true</sandbox>
+            </secureFallbackScript>
+          </script>
+          <projectName>Deploy_ECOM_InventoryModule</projectName>
+          <projectFullName>Deploy_ECOM_InventoryModule</projectFullName>
+          <parameters class="linked-hash-map"/>
+          <referencedParameters></referencedParameters>
+          <choiceType>ET_FORMATTED_HTML</choiceType>
+          <omitValueField>false</omitValueField>
+        </org.biouno.unochoice.DynamicReferenceParameter>
+        <hudson.model.BooleanParameterDefinition>
+          <name>Test Supply Demand Op service</name>
+          <defaultValue>false</defaultValue>
+        </hudson.model.BooleanParameterDefinition>
+        <hudson.model.BooleanParameterDefinition>
+          <name>Test Availability Op service</name>
+          <defaultValue>false</defaultValue>
+        </hudson.model.BooleanParameterDefinition>
+      </parameterDefinitions>
+    </hudson.model.ParametersDefinitionProperty>
+  </properties>
+  <definition class="org.jenkinsci.plugins.workflow.cps.CpsScmFlowDefinition" plugin="workflow-cps@4168.v7ea_f89c358b_d">
+    <scm class="hudson.plugins.git.GitSCM" plugin="git@5.7.0">
+      <configVersion>2</configVersion>
+      <userRemoteConfigs>
+        <hudson.plugins.git.UserRemoteConfig>
+          <url>https://github.com/EVikramss/ECOM.git</url>
+        </hudson.plugins.git.UserRemoteConfig>
+      </userRemoteConfigs>
+      <branches>
+        <hudson.plugins.git.BranchSpec>
+          <name>*/master</name>
+        </hudson.plugins.git.BranchSpec>
+      </branches>
+      <doGenerateSubmoduleConfigurations>false</doGenerateSubmoduleConfigurations>
+      <submoduleCfg class="empty-list"/>
+      <extensions/>
+    </scm>
+    <scriptPath>modules/InventoryModule/_BuildFiles/DeployJenkinsfile</scriptPath>
+    <lightweight>false</lightweight>
+  </definition>
+  <triggers/>
+  <disabled>false</disabled>
+</flow-definition>

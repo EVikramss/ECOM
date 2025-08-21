@@ -1,0 +1,28 @@
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+	<changeSet id="202508181000-1" author="user">
+		<createTable tableName="ItemNodeInventoryAudit">
+			<column name="nodeinventorykey" type="varchar(32)">
+				<constraints nullable="false" />
+			</column>
+			<column name="oldquantity" type="INT" defaultValue="0">
+				<constraints nullable="false" />
+			</column>
+			<column name="newquantity" type="INT" defaultValue="0">
+				<constraints nullable="false" />
+			</column>
+			<column name="issupplychange" type="boolean">
+				<constraints nullable="false" />
+			</column>
+			<column name="audittype" type="varchar(32)">
+				<constraints nullable="false" />
+			</column>
+			<column name="eventdate" type="varchar(32)">
+				<constraints nullable="false" />
+			</column>
+			<column name="itemnodeauditkey" type="varchar(32)">
+				<constraints primaryKey="true" nullable="false" />
+			</column>
+		</createTable>
+   </changeSet>
+</databaseChangeLog>

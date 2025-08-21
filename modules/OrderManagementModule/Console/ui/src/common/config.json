@@ -1,0 +1,8 @@
+{
+    "apiURL": "GRAPH_URL",
+    "authority": "COGNITO_URL",
+    "client_id": "CLIENT_ID",
+    "redirect_uri": "REDIRECT_URL",
+    "response_type": "code",
+    "scope" : "phone openid email"
+}

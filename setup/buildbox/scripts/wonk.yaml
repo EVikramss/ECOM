@@ -1,0 +1,14 @@
+policy_sets:
+  MyCombinedPolicy:
+    managed:
+      - AmazonRDSFullAccess
+      - AmazonVPCFullAccess
+      - AWSLambda_FullAccess
+      - AmazonAPIGatewayAdministrator
+      - AmazonECS_FullAccess
+      - SecretsManagerReadWrite
+      - AmazonS3FullAccess
+      - AmazonEventBridgeFullAccess
+      - CloudWatchFullAccessV2
+      - AWSCloudFormationFullAccess
+      - AmazonSSMFullAccess

@@ -1,0 +1,13 @@
+{
+	"Queries": [
+		"CREATE TABLE ItemInventoryMap (ItemID varchar(32) NOT NULL, ItemInventoryKey varchar(32) NOT NULL, PRIMARY KEY (ItemInventoryKey))",
+		"CREATE TABLE NodeInventoryMap (ItemInventoryKey varchar(32) NOT NULL, ItemID varchar(32) NOT NULL, ShipNode varchar(16) NOT NULL, IsActive bool DEFAULT TRUE, NodeInventoryKey varchar(32) NOT NULL, PRIMARY KEY (NodeInventoryKey))",
+		"CREATE UNIQUE INDEX nodeinvmap_ind1 ON NodeInventoryMap(ItemID, ShipNode)",
+		"CREATE TABLE ItemNodeSupply (NodeInventoryKey varchar(32) NOT NULL, SupplyType varchar(16) NOT NULL, Quantity int DEFAULT 0, SupplyDate date, ItemNodeSupplyKey varchar(32) NOT NULL, PRIMARY KEY (ItemNodeSupplyKey))",
+		"CREATE TABLE ItemNodeDemand (NodeInventoryKey varchar(32) NOT NULL, DemandType varchar(16) NOT NULL, Quantity int DEFAULT 0, DemandDate date, DemandReference varchar(24) NOT NULL, DemandExpiryDate date, ItemNodeDemandKey varchar(32) NOT NULL, PRIMARY KEY (ItemNodeDemandKey))",
+		"CREATE UNIQUE INDEX itemnodedmnd_ind1 ON ItemNodeDemand(DemandReference, NodeInventoryKey)",
+		"CREATE TABLE ItemNodeDemandConsolidated (NodeInventoryKey varchar(32) NOT NULL, Quantity int DEFAULT 0, ItemNodeDmdConsolKey varchar(32) NOT NULL, PRIMARY KEY 	(ItemNodeDmdConsolKey))",
+		"CREATE UNIQUE INDEX itemnodedmndconsol_ind1 ON ItemNodeDemandConsolidated(NodeInventoryKey)",
+		"CREATE TABLE ItemNodeInventoryAudit (NodeInventoryKey varchar(32) NOT NULL, OldQuantity int DEFAULT 0 NOT NULL, NewQuantity int DEFAULT 0 NOT NULL, IsSupplyChange bool NOT NULL, AuditType varchar(32) NOT NULL, EventDate varchar(32) NOT NULL, ItemNodeAuditKey varchar(32) NOT NULL, PRIMARY KEY (ItemNodeAuditKey))"
+	]
+}

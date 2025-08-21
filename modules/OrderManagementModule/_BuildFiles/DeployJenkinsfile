@@ -1,0 +1,290 @@
+// define variables for each deployable module
+def repoPath
+def isDBExisting = true
+def isCreateOrderExisting = true
+def isOrderConsoleExisting = true
+def areAllServicesExisting = true
+def runCDK = false
+
+// define variables for parameters
+def crOrdResConc
+def crOrdProvConc
+def totalConcurrencyLimit = 360
+
+pipeline {
+    agent any
+
+    environment {
+        MODULE_NAME = 'OrderManagementModule'
+    }
+
+    stages {
+		stage('validateInput') {
+            steps {
+				script {
+					crOrdResConc = params['Create Order Reserved Concurrency'].toInteger()
+					crOrdProvConc = params['Create Order Provisioned Concurrency'].toInteger()
+					
+					checkConcurrency(crOrdResConc, crOrdProvConc, 'Create Order')
+					
+					checkOverallReservedConcurrency(crOrdResConc, totalConcurrencyLimit)
+				}
+            }
+        }
+	
+		stage('verifyAndExpandBuildPackagePresent') {
+            steps {
+				script {
+					def buildPackage = params['Build Package Name']
+					def buildPackagePath = "/home/ec2-user/buildArtifacts/" + buildPackage
+					repoPath = "/home/ec2-user/deploymentWorkspace2/"
+					if (!fileExists(buildPackagePath)) {
+						error('Build package not found!')
+					} else {
+						sh """
+							rm -rf ${repoPath}/*
+							unzip -q ${buildPackagePath} -d ${repoPath}/
+						"""
+					}
+				}
+            }
+        }
+		
+		stage('checkToCreateOrUpdateService') {
+            steps {
+				script {
+					def scriptPath = "${repoPath}/modules/OrderManagementModule/Database/_scripts/checkExisting.sh"
+					isDBExisting = checkIfExisting(scriptPath)
+					areAllServicesExisting = areAllServicesExisting && isDBExisting
+					
+					scriptPath = "${repoPath}/modules/OrderManagementModule/CreateOrder/_scripts/checkExisting.sh"
+					isCreateOrderExisting = checkIfExisting(scriptPath)
+					areAllServicesExisting = areAllServicesExisting && isCreateOrderExisting
+					
+					scriptPath = "${repoPath}/modules/OrderManagementModule/Console/_scripts/checkExisting.sh"
+					isOrderConsoleExisting = checkIfExisting(scriptPath)
+					areAllServicesExisting = areAllServicesExisting && isOrderConsoleExisting
+					
+					if (params['Deploy Order Management Module']) {
+						runCDK = true
+					}
+				}
+            }
+        }
+		
+		/*
+		stage('SetPermissions') {
+            steps {
+                echo "SetPermissions"
+				script {
+					// sh "chmod -R +x ${repoPath}/"
+				}
+            }
+        }
+		*/
+		
+        stage('PreDeploy') {
+            steps {
+				script {					
+					if(!areAllServicesExisting && runCDK) {
+						echo "PreDeploy step"
+						
+						def mainScriptPath = "${repoPath}/modules/OrderManagementModule/_scripts/preDeploy.sh"
+						echo "Executing ${mainScriptPath}"
+						sh "${mainScriptPath}"
+						
+						if (runCDK && !isDBExisting) {
+							def scriptPath = "${repoPath}/modules/OrderManagementModule/Database/_scripts/preDeploy.sh"
+							if (fileExists(scriptPath)) {
+								echo "Executing ${scriptPath}"
+								sh "${scriptPath}"
+							}
+						}
+	
+						if (runCDK && !isCreateOrderExisting) {
+							def scriptPath = "${repoPath}/modules/OrderManagementModule/CreateOrder/_scripts/preDeploy.sh"
+							if (fileExists(scriptPath)) {
+								echo "Executing ${scriptPath}"
+								sh "${scriptPath}"
+							}
+						}
+						
+						if (runCDK && !isOrderConsoleExisting) {
+							def scriptPath = "${repoPath}/modules/OrderManagementModule/Console/_scripts/preDeploy.sh"
+							if (fileExists(scriptPath)) {
+								echo "Executing ${scriptPath}"
+								sh "${scriptPath}"
+							}
+						}
+						
+						echo "PreDeploy step complete"
+					}
+                }
+            }
+        }
+
+        stage('DeployNewServices') {
+            steps {
+				script {
+					if(!areAllServicesExisting || runCDK) {
+						echo "Deploy step"
+						
+						def mainScriptPath = "${repoPath}/modules/OrderManagementModule/_scripts/deploy.sh"
+						echo "Executing ${mainScriptPath}"
+						sh "${mainScriptPath} \"${crOrdResConc}\" \"${crOrdProvConc}\""
+						
+						def auxScriptPath = "${repoPath}/modules/OrderManagementModule/Console/ui/_scripts/deploy.sh"
+						echo "Executing ${auxScriptPath}"
+						sh "${auxScriptPath}"
+						
+						echo "Deploy step complete"
+					}
+                }
+            }
+        }
+		
+		stage('initDB') {
+            steps {
+				script {
+					if(!isDBExisting) {
+						echo "Initialize DB step start"
+						
+						def scriptPath = "${repoPath}/modules/OrderManagementModule/Database/_scripts/initDeployment.sh"
+						echo "Executing ${scriptPath}"
+						sh "${scriptPath}"
+						
+						echo "Initialize DB step complete"
+					}
+                }
+            }
+        }
+		
+		stage('PostDeploy') {
+            steps {
+                script {
+					if(!areAllServicesExisting && runCDK) {
+						echo "PostDeploy step"
+						
+						def mainScriptPath = "${repoPath}/modules/OrderManagementModule/_scripts/preDeploy.sh"
+						echo "Executing ${mainScriptPath}"
+						sh "${mainScriptPath}"
+						
+						if (runCDK && !isDBExisting) {
+							def scriptPath = "${repoPath}/modules/OrderManagementModule/Database/_scripts/postDeploy.sh"
+							if (fileExists(scriptPath)) {
+								echo "Executing ${scriptPath}"
+								sh "${scriptPath}"
+							}
+						}
+	
+						if (runCDK && !isCreateOrderExisting) {
+							def scriptPath = "${repoPath}/modules/OrderManagementModule/CreateOrder/_scripts/postDeploy.sh"
+							if (fileExists(scriptPath)) {
+								echo "Executing ${scriptPath}"
+								sh "${scriptPath}"
+							}
+						}
+						
+						if (runCDK && !isOrderConsoleExisting) {
+							def scriptPath = "${repoPath}/modules/OrderManagementModule/Console/_scripts/postDeploy.sh"
+							if (fileExists(scriptPath)) {
+								echo "Executing ${scriptPath}"
+								sh "${scriptPath}"
+							}
+						}
+						
+						echo "PostDeploy step complete"
+					}
+                }
+            }
+        }
+		
+		stage('UpdateExistingServices') {
+            steps {
+				script {
+					echo "Update services start"
+					
+					if (runCDK && isDBExisting && params['Database Changes']=="Update") {
+						def scriptPath = "${repoPath}/modules/OrderManagementModule/Database/_scripts/updateDeployment.sh"
+						if (fileExists(scriptPath)) {
+							echo "Executing ${scriptPath}"
+							sh "${scriptPath} \"${params['Database Changes']}\""
+						}
+					}
+	
+					if (runCDK && isCreateOrderExisting) {
+						def scriptPath = "${repoPath}/modules/OrderManagementModule/CreateOrder/_scripts/updateDeployment.sh"
+						if (fileExists(scriptPath)) {
+							echo "Executing ${scriptPath}"
+							sh "${scriptPath} \"${cnsDmndResConc}\" \"${cnsDmndProvConc}\""
+						}
+					}
+					
+					if (runCDK && isOrderConsoleExisting) {
+						def scriptPath = "${repoPath}/modules/OrderManagementModule/Console/_scripts/updateDeployment.sh"
+						if (fileExists(scriptPath)) {
+							echo "Executing ${scriptPath}"
+							sh "${scriptPath} \"${getAvlResConc}\" \"${getAvlProvConc}\""
+						}
+					}
+					
+					echo "Update services complete"
+                }
+            }
+        }
+		
+		stage('Test') {
+            steps {
+                script {
+					echo "Test step start"
+	
+					if (params['Test Create Order service']) {
+						def scriptPath = "${repoPath}/modules/OrderManagementModule/CreateOrder/_scripts/test.sh"
+						if (fileExists(scriptPath)) {
+							echo "Executing ${scriptPath}"
+							sh "${scriptPath}"
+						}
+					}
+					
+					if (params['Test Order Console']) {
+						def scriptPath = "${repoPath}/modules/OrderManagementModule/Console/_scripts/test.sh"
+						if (fileExists(scriptPath)) {
+							echo "Executing ${scriptPath}"
+							sh "${scriptPath}"
+						}
+					}					
+					
+					echo "Test step complete"
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Pipeline completed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed.'
+        }
+    }
+}
+
+def checkIfExisting(String scriptPath) {
+	echo "Executing ${scriptPath}"
+	def isServExisting = sh(script: "${scriptPath}", returnStatus: true)
+	return isServExisting
+}
+
+def checkConcurrency(int reservedConc, int provConc, String subModuleName) {
+	if (provConc > reservedConc) {
+		error(subModuleName + ': provisioned concurrency greater than reserved concurrency')
+	}
+}
+
+def checkOverallReservedConcurrency(crOrdResConc, totalConcurrencyLimit) {
+	def totalConcurrency = crOrdResConc
+	if(totalConcurrency > totalConcurrencyLimit) {
+		error('Sum of reserved concurrency for all modules should not exceed ' + totalConcurrencyLimit)
+	}
+}

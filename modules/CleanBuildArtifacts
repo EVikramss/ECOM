@@ -1,0 +1,25 @@
+pipeline {
+    agent any
+
+    stages {		
+		stage('Clean') {
+            steps {
+                script {
+                    def dest = "/home/ec2-user/buildArtifacts"
+
+                    sh """
+                        rm -rf ${dest}/*
+                    """
+					
+					echo "Cleaned: ${dest}"
+                }
+            }
+        }
+    }
+
+    post {
+		always {
+			cleanWs()
+		}
+    }
+}

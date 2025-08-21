@@ -1,0 +1,32 @@
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+	<changeSet id="202508181000-1" author="user">
+		<createTable tableName="ItemNodeDemand">
+			<column name="nodeinventorykey" type="varchar(32)">
+				<constraints nullable="false" />
+			</column>
+			<column name="demandtype" type="varchar(16)">
+				<constraints nullable="false" />
+			</column>
+			<column name="quantity" type="INT" defaultValue="0">
+				<constraints nullable="false" />
+			</column>
+			<column name="demanddate" type="DATE">
+				<constraints nullable="true" />
+			</column>
+			<column name="demandreference" type="varchar(24)">
+				<constraints nullable="false" />
+			</column>
+			<column name="demandexpirydate" type="DATE">
+				<constraints nullable="true" />
+			</column>
+			<column name="itemnodedemandkey" type="varchar(32)">
+				<constraints primaryKey="true" nullable="false" />
+			</column>
+		</createTable>
+		<createIndex indexName="itemnodedmnd_ind1" tableName="ItemNodeDemand">
+			<column name="demandreference"/>
+			<column name="nodeinventorykey"/>
+		</createIndex>
+   </changeSet>
+</databaseChangeLog>
