@@ -303,14 +303,14 @@ public class BuildBoxCdkStack extends Stack {
 	private void setEC2CommandList(List<String> commandList) {
 
 		// download artifacts & setup folders
-      commandList.add("sudo yum install -y git");
+        commandList.add("sudo yum install -y git");
 		commandList.add("cd /home/ec2-user");
 		commandList.add("git clone https://github.com/EVikramss/ECOM.git");
 		commandList.add("chmod -R 777 ECOM");
 
 		// install needed softwares
 		commandList.add("cd ./ECOM/setup/buildbox/scripts");
-		commandList.add("./installSoftwares.sh");
 		commandList.add("./setupBuildFolders.sh");
+		commandList.add("./installSoftwares.sh");
 	}
 }
