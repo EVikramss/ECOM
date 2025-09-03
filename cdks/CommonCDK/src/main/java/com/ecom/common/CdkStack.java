@@ -162,6 +162,6 @@ public class CdkStack extends Stack {
 		CfnOutput.Builder.create(this, "RunDDLFUNCRLID").value(runDDLFunc.getRole().getRoleArn()).build();
 		CfnOutput.Builder.create(this, "ECSARN").value(cluster.getClusterArn()).build();
 		CfnOutput.Builder.create(this, "ECSROLE").value(ecsInstanceRole.getRoleArn()).build();
-		CfnOutput.Builder.create(this, "ECRREPO").value(ecrrepo.getRepositoryArn()).build();
+		CfnOutput.Builder.create(this, "ECRREPO").value(ecrrepo.getRepositoryUri()).build();
 	}
 }
