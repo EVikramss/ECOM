@@ -98,6 +98,10 @@ return &quot;&quot;&quot;&lt;div style=&apos;text-align: center; font-weight: bo
           <name>Update Create Order service</name>
           <defaultValue>false</defaultValue>
         </hudson.model.BooleanParameterDefinition>
+		<hudson.model.BooleanParameterDefinition>
+          <name>Update Schedule Order service</name>
+          <defaultValue>false</defaultValue>
+        </hudson.model.BooleanParameterDefinition>
 		<org.biouno.unochoice.DynamicReferenceParameter plugin="uno-choice@2.8.8">
           <name></name>
           <randomName>choice-parameter-7620214171090</randomName>
