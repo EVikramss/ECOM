@@ -53,9 +53,22 @@ import software.amazon.awscdk.services.ec2.SubnetSelection;
 import software.amazon.awscdk.services.ec2.SubnetType;
 import software.amazon.awscdk.services.ec2.Vpc;
 import software.amazon.awscdk.services.ec2.VpcLookupOptions;
+import software.amazon.awscdk.services.ecs.AwsLogDriverProps;
+import software.amazon.awscdk.services.ecs.Cluster;
+import software.amazon.awscdk.services.ecs.ClusterAttributes;
+import software.amazon.awscdk.services.ecs.ContainerDefinition;
+import software.amazon.awscdk.services.ecs.ContainerDefinitionOptions;
+import software.amazon.awscdk.services.ecs.ContainerImage;
+import software.amazon.awscdk.services.ecs.Ec2Service;
+import software.amazon.awscdk.services.ecs.Ec2TaskDefinition;
+import software.amazon.awscdk.services.ecs.ICluster;
+import software.amazon.awscdk.services.ecs.LogDriver;
+import software.amazon.awscdk.services.ecs.NetworkMode;
+import software.amazon.awscdk.services.ecs.Secret;
 import software.amazon.awscdk.services.iam.AnyPrincipal;
 import software.amazon.awscdk.services.iam.Effect;
 import software.amazon.awscdk.services.iam.IRole;
+import software.amazon.awscdk.services.iam.ManagedPolicy;
 import software.amazon.awscdk.services.iam.PolicyStatement;
 import software.amazon.awscdk.services.iam.Role;
 import software.amazon.awscdk.services.iam.ServicePrincipal;
@@ -66,6 +79,8 @@ import software.amazon.awscdk.services.lambda.FunctionUrl;
 import software.amazon.awscdk.services.lambda.FunctionUrlAuthType;
 import software.amazon.awscdk.services.lambda.FunctionUrlOptions;
 import software.amazon.awscdk.services.lambda.Runtime;
+import software.amazon.awscdk.services.logs.LogGroup;
+import software.amazon.awscdk.services.logs.RetentionDays;
 import software.amazon.awscdk.services.rds.AuroraPostgresClusterEngineProps;
 import software.amazon.awscdk.services.rds.AuroraPostgresEngineVersion;
 import software.amazon.awscdk.services.rds.ClusterInstance;
@@ -81,9 +96,7 @@ import software.amazon.awscdk.services.rds.ParameterGroupProps;
 import software.amazon.awscdk.services.rds.ProvisionedClusterInstanceProps;
 import software.amazon.awscdk.services.s3.Bucket;
 import software.amazon.awscdk.services.s3.IBucket;
-import software.amazon.awscdk.services.secretsmanager.HostedRotation;
 import software.amazon.awscdk.services.secretsmanager.ISecret;
-import software.amazon.awscdk.services.secretsmanager.RotationScheduleOptions;
 import software.constructs.Construct;
 
 public class CdkStack extends Stack {
@@ -123,6 +136,7 @@ public class CdkStack extends Stack {
 		lookupEndpoints();
 		createAuroraPostgresDB(dbreadRplCnt);
 		checkAndSetupLambdaBackedAPIs();
+		setupECSJobs();
 
 		// record output variables
 		setupOutputVariables();
@@ -269,7 +283,7 @@ public class CdkStack extends Stack {
 
 		// need to update lambda function to read
 		dbSecret.grantRead(function);
-		
+
 		return function;
 	}
 
@@ -381,6 +395,48 @@ public class CdkStack extends Stack {
 		smepsg.addIngressRule(sg, Port.HTTPS);
 		sg.addEgressRule(dbsg, Port.POSTGRES);
 		sg.addEgressRule(smepsg, Port.HTTPS);
+	}
+
+	private void setupECSJobs() {
+		String baseDir = "/home/ec2-user/deploymentWorkspace2/modules/OrderManagementModule/";
+		setupECSJob(baseDir, "ScheduleOrder");
+	}
+
+	private void setupECSJob(String baseDir, String jobName) {
+		// create roles for ecs job
+		Role executionRole = Role.Builder.create(this, jobName + "TskExecRole")
+				.assumedBy(new ServicePrincipal("ecs-tasks.amazonaws.com"))
+				.managedPolicies(
+						List.of(ManagedPolicy.fromAwsManagedPolicyName("service-role/AmazonECSTaskExecutionRolePolicy"),
+								ManagedPolicy.fromAwsManagedPolicyName("SecretsManagerReadWrite")))
+				.build();
+
+		Role taskRole = Role.Builder.create(this, jobName + "TskRole")
+				.assumedBy(new ServicePrincipal("ecs-tasks.amazonaws.com"))
+				.managedPolicies(List.of(ManagedPolicy.fromAwsManagedPolicyName("SecretsManagerReadWrite"),
+						ManagedPolicy.fromAwsManagedPolicyName("AmazonRDSDataFullAccess")))
+				.build();
+
+		// create task definition along with log group
+		Ec2TaskDefinition taskDefinition = Ec2TaskDefinition.Builder.create(this, jobName + "TskDef")
+				.networkMode(NetworkMode.AWS_VPC).executionRole(executionRole).taskRole(taskRole).build();
+
+		LogGroup logGroup = LogGroup.Builder.create(this, jobName + "LogGroup").logGroupName("/ecs/" + jobName)
+				.retention(RetentionDays.ONE_DAY).build();
+
+		// define container along with rds secret
+		String imageURI = System.getenv("ECRREPO") + ":" + jobName;
+		ContainerDefinition container = taskDefinition.addContainer(jobName + "Container", ContainerDefinitionOptions
+				.builder().image(ContainerImage.fromRegistry(imageURI)).memoryLimitMiB(1024).cpu(1)
+				.logging(LogDriver.awsLogs(AwsLogDriverProps.builder().logGroup(logGroup).streamPrefix("poc").build()))
+				.secrets(Map.of("SECRET", Secret.fromSecretsManager(dbSecret)))
+				.environment(Map.of("SECRET_ARN", dbSecret.getSecretArn(), "DBPRX_EP", dbProxy.getEndpoint())).build());
+
+		// fetch cluster & create service for task
+		ICluster cluster = Cluster.fromClusterAttributes(this, "ECOMECSCluster",
+				ClusterAttributes.builder().clusterName(System.getenv("ECSARN")).vpc(vpc).build());
+		Ec2Service service = Ec2Service.Builder.create(this, jobName + "Service").cluster(cluster)
+				.taskDefinition(taskDefinition).desiredCount(1).build();
 	}
 
 	private void lookupNetwork() {

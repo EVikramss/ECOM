@@ -113,6 +113,9 @@ public class CdkApp {
 		checkEnvVariableNotEmpty("RunDDLFUNCID");
 		checkEnvVariableNotEmpty("RunDDLSGID");
 		checkEnvVariableNotEmpty("RunDDLFUNCRLID");
+		checkEnvVariableNotEmpty("ECSARN");
+		checkEnvVariableNotEmpty("ECSROLE");
+		checkEnvVariableNotEmpty("ECRREPO");
 	}
 
 	private static void checkEnvVariableWithDefaults(String variableName, Integer defaultVariableValue) {

@@ -7,9 +7,13 @@ import java.util.Properties;
 import software.amazon.awscdk.CfnOutput;
 import software.amazon.awscdk.Stack;
 import software.amazon.awscdk.StackProps;
+import software.amazon.awscdk.services.autoscaling.AutoScalingGroup;
 import software.amazon.awscdk.services.ec2.ISecurityGroup;
 import software.amazon.awscdk.services.ec2.ISubnet;
 import software.amazon.awscdk.services.ec2.IVpc;
+import software.amazon.awscdk.services.ec2.InstanceClass;
+import software.amazon.awscdk.services.ec2.InstanceSize;
+import software.amazon.awscdk.services.ec2.InstanceType;
 import software.amazon.awscdk.services.ec2.InterfaceVpcEndpoint;
 import software.amazon.awscdk.services.ec2.InterfaceVpcEndpointAwsService;
 import software.amazon.awscdk.services.ec2.Port;
@@ -19,8 +23,14 @@ import software.amazon.awscdk.services.ec2.SubnetConfiguration;
 import software.amazon.awscdk.services.ec2.SubnetSelection;
 import software.amazon.awscdk.services.ec2.SubnetType;
 import software.amazon.awscdk.services.ec2.Vpc;
+import software.amazon.awscdk.services.ecr.Repository;
+import software.amazon.awscdk.services.ecs.AsgCapacityProvider;
+import software.amazon.awscdk.services.ecs.Cluster;
+import software.amazon.awscdk.services.ecs.EcsOptimizedImage;
 import software.amazon.awscdk.services.iam.Effect;
+import software.amazon.awscdk.services.iam.ManagedPolicy;
 import software.amazon.awscdk.services.iam.PolicyStatement;
+import software.amazon.awscdk.services.iam.Role;
 import software.amazon.awscdk.services.iam.ServicePrincipal;
 import software.amazon.awscdk.services.lambda.Code;
 import software.amazon.awscdk.services.lambda.Function;
@@ -41,6 +51,9 @@ public class CdkStack extends Stack {
 	private Bucket ecomBucket;
 	private Function runDDLFunc;
 	private ISecurityGroup runDDLFuncSG;
+	private Cluster cluster;
+	private Role ecsInstanceRole;
+	private Repository ecrrepo;
 
 	public CdkStack(final Construct scope, final String id, final StackProps props, Properties additionalProperties) {
 		super(scope, id, props);
@@ -50,8 +63,36 @@ public class CdkStack extends Stack {
 		setupCommonVPCEndpoints();
 		setupS3();
 		setupRunDDLLambda("/home/cloudshell-user/ECOM/modules/CommonModule/");
+		setupECSCluster();
 
 		setupOutputVariables();
+	}
+
+	private void setupECSCluster() {
+		// create ECS role and add permissions to it
+		ecsInstanceRole = Role.Builder.create(this, "EcsInstanceRole")
+				.assumedBy(new ServicePrincipal("ec2.amazonaws.com"))
+				.managedPolicies(List
+						.of(ManagedPolicy.fromAwsManagedPolicyName("service-role/AmazonEC2ContainerServiceforEC2Role")))
+				.build();
+
+		// create ECS cluster
+		cluster = Cluster.Builder.create(this, "ECOMECSCluster").vpc(vpc).clusterName("ECOMECSCluster").build();
+
+		// create ASG for ECS & add to cluster
+		AutoScalingGroup asg = AutoScalingGroup.Builder.create(this, "ECOMECSASG").vpc(vpc)
+				.instanceType(InstanceType.of(InstanceClass.BURSTABLE3, InstanceSize.MEDIUM))
+				.machineImage(EcsOptimizedImage.amazonLinux2()).minCapacity(2).maxCapacity(4)
+				.vpcSubnets(SubnetSelection.builder().subnetType(SubnetType.PRIVATE_ISOLATED).build())
+				.associatePublicIpAddress(false).build();
+
+		cluster.addAsgCapacityProvider(AsgCapacityProvider.Builder.create(this, "ECOMECSASGCapProv")
+				.autoScalingGroup(asg).enableManagedTerminationProtection(true).build());
+
+		// create ECR to hold docker images
+		ecrrepo = Repository.Builder.create(this, "ECOMRepo").repositoryName("ECOMRepo").build();
+		ecrrepo.grantRead(asg);
+		ecrrepo.grantRead(ecsInstanceRole);
 	}
 
 	private void setupRunDDLLambda(String baseDir) {
@@ -119,5 +160,8 @@ public class CdkStack extends Stack {
 		CfnOutput.Builder.create(this, "RunDDLFUNCID").value(runDDLFunc.getFunctionArn()).build();
 		CfnOutput.Builder.create(this, "RunDDLSGID").value(runDDLFuncSG.getSecurityGroupId()).build();
 		CfnOutput.Builder.create(this, "RunDDLFUNCRLID").value(runDDLFunc.getRole().getRoleArn()).build();
+		CfnOutput.Builder.create(this, "ECSARN").value(cluster.getClusterArn()).build();
+		CfnOutput.Builder.create(this, "ECSROLE").value(ecsInstanceRole.getRoleArn()).build();
+		CfnOutput.Builder.create(this, "ECRREPO").value(ecrrepo.getRepositoryArn()).build();
 	}
 }
