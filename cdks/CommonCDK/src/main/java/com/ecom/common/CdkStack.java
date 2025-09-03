@@ -90,7 +90,7 @@ public class CdkStack extends Stack {
 				.autoScalingGroup(asg).enableManagedTerminationProtection(true).build());
 
 		// create ECR to hold docker images
-		ecrrepo = Repository.Builder.create(this, "ECOMRepo").repositoryName("ECOMRepo").build();
+		ecrrepo = Repository.Builder.create(this, "ecomrepo").repositoryName("ecomrepo").build();
 		ecrrepo.grantRead(asg);
 		ecrrepo.grantRead(ecsInstanceRole);
 	}
