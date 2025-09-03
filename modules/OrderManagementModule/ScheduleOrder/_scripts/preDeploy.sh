@@ -4,7 +4,7 @@ SCRIPT_DIR="$(dirname "$(realpath "$0")")"
 cd $SCRIPT_DIR
 cd ..
 
-jobName="ScheduleOrder"
+jobName="scheduleorder"
 ECRREPO=$(aws cloudformation describe-stacks --stack-name COMMON --query "Stacks[0].Outputs[?OutputKey=='ECRREPO'].OutputValue" --output text)
 
 # docker build image & push to ECR
