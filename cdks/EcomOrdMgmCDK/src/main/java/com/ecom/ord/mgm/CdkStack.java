@@ -425,7 +425,7 @@ public class CdkStack extends Stack {
 				.retention(RetentionDays.ONE_DAY).build();
 
 		// define container along with rds secret
-		String imageURI = System.getenv("ECRREPO") + ":" + jobName.toLowerCase()
+		String imageURI = System.getenv("ECRREPO") + ":" + jobName.toLowerCase();
 		ContainerDefinition container = taskDefinition.addContainer(jobName + "Container", ContainerDefinitionOptions
 				.builder().image(ContainerImage.fromRegistry(imageURI)).memoryLimitMiB(1024).cpu(1)
 				.logging(LogDriver.awsLogs(AwsLogDriverProps.builder().logGroup(logGroup).streamPrefix("poc").build()))
