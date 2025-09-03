@@ -31,7 +31,6 @@ sudo service jenkins start
 # configure jenkins
 cd ../jenkins/scripts
 ./configureJenkins.sh
-sudo usermod -a -G docker jenkins
 
 # temp 
 # sudo yum -y install git-daemon.x86_64

@@ -10,6 +10,8 @@ sudo cp ../files/config_disableUserLogin.xml /var/lib/jenkins/config.xml
 sudo cp -rf ../files/jobs/* /var/lib/jenkins/jobs/
 sudo chmod -R 777 /var/lib/jenkins/jobs/
 
+sudo usermod -a -G docker jenkins
+
 # restart jenkins service
 sudo systemctl restart jenkins.service
 
