@@ -24,6 +24,7 @@ import software.amazon.awscdk.services.ec2.SubnetSelection;
 import software.amazon.awscdk.services.ec2.SubnetType;
 import software.amazon.awscdk.services.ec2.Vpc;
 import software.amazon.awscdk.services.ecr.Repository;
+import software.amazon.awscdk.services.ecs.AddCapacityOptions;
 import software.amazon.awscdk.services.ecs.AsgCapacityProvider;
 import software.amazon.awscdk.services.ecs.Cluster;
 import software.amazon.awscdk.services.ecs.EcsOptimizedImage;
@@ -79,19 +80,29 @@ public class CdkStack extends Stack {
 		// create ECS cluster
 		cluster = Cluster.Builder.create(this, "ECOMECSCluster").vpc(vpc).clusterName("ECOMECSCluster").build();
 
-		// create ASG for ECS & add to cluster
-		AutoScalingGroup asg = AutoScalingGroup.Builder.create(this, "ECOMECSASG").vpc(vpc)
-				.instanceType(InstanceType.of(InstanceClass.BURSTABLE3, InstanceSize.MEDIUM))
-				.machineImage(EcsOptimizedImage.amazonLinux2()).minCapacity(2).maxCapacity(4)
-				.vpcSubnets(SubnetSelection.builder().subnetType(SubnetType.PRIVATE_ISOLATED).build())
-				.associatePublicIpAddress(false).build();
+		/*
+		 * // create ASG for ECS & add to cluster AutoScalingGroup asg =
+		 * AutoScalingGroup.Builder.create(this, "ECOMECSASG").vpc(vpc)
+		 * .instanceType(InstanceType.of(InstanceClass.BURSTABLE3, InstanceSize.MEDIUM))
+		 * .machineImage(EcsOptimizedImage.amazonLinux2()).minCapacity(2).maxCapacity(4)
+		 * .vpcSubnets(SubnetSelection.builder().subnetType(SubnetType.PRIVATE_ISOLATED)
+		 * .build()) .associatePublicIpAddress(false).build();
+		 * cluster.addAsgCapacityProvider(AsgCapacityProvider.Builder.create(this,
+		 * "ECOMECSASGCapProv")
+		 * .autoScalingGroup(asg).enableManagedTerminationProtection(true).build());
+		 */
 
-		cluster.addAsgCapacityProvider(AsgCapacityProvider.Builder.create(this, "ECOMECSASGCapProv")
-				.autoScalingGroup(asg).enableManagedTerminationProtection(true).build());
+		cluster.addCapacity("DefaultASGCapacity",
+				AddCapacityOptions.builder()
+						.instanceType(InstanceType.of(InstanceClass.BURSTABLE3, InstanceSize.MEDIUM))
+						.autoScalingGroupName("ECOMECSASG").desiredCapacity(2).maxCapacity(4)
+						.machineImage(EcsOptimizedImage.amazonLinux2())
+						.vpcSubnets(SubnetSelection.builder().subnetType(SubnetType.PRIVATE_ISOLATED).build())
+						.associatePublicIpAddress(false).canContainersAccessInstanceRole(true).spotPrice(null).build());
 
 		// create ECR to hold docker images
 		ecrrepo = Repository.Builder.create(this, "ecomrepo").repositoryName("ecomrepo").build();
-		ecrrepo.grantRead(asg);
+		ecrrepo.grantRead(cluster.getAutoscalingGroup());
 		ecrrepo.grantRead(ecsInstanceRole);
 	}
 
