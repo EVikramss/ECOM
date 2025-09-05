@@ -12,8 +12,8 @@ sudo yum install p7zip -y
 sudo ln -s /usr/bin/7za /usr/bin/7z
 
 # install maven
-wget https://archive.apache.org/dist/maven/maven-3/3.9.4/binaries/apache-maven-3.9.4-bin.tar.gz
-tar -zxf apache-maven-3.9.4-bin.tar.gz
+#wget https://archive.apache.org/dist/maven/maven-3/3.9.4/binaries/apache-maven-3.9.4-bin.tar.gz
+#tar -zxf apache-maven-3.9.4-bin.tar.gz
 sudo yum install -y maven
 
 # install npm for cdk
