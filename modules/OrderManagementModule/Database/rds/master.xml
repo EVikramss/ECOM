@@ -7,5 +7,6 @@
 	<include file="OrderItemData.xml" relativeToChangelogFile="false" />
 	<include file="CustomerContact.xml" relativeToChangelogFile="false" />
 	<include file="OrderAddress.xml" relativeToChangelogFile="false" />
+	<include file="OrderStatus.xml" relativeToChangelogFile="false" />
 
 </databaseChangeLog>
