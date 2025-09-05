@@ -152,7 +152,7 @@ public class CdkStack extends Stack {
 				.service(GatewayVpcEndpointAwsService.S3).build();
 
 		// need log endpoint to write logs to log group
-		InterfaceVpcEndpoint logEndpoint = InterfaceVpcEndpoint.Builder.create(this, "ECRDckrInterfaceEndpoint").vpc(vpc)
+		InterfaceVpcEndpoint logEndpoint = InterfaceVpcEndpoint.Builder.create(this, "ECSLogInterfaceEndpoint").vpc(vpc)
 				.service(InterfaceVpcEndpointAwsService.CLOUDWATCH_LOGS).privateDnsEnabled(true)
 				.securityGroups(List.of(ecsepsg)).open(true)
 				.subnets(SubnetSelection.builder().subnets(subPrivateSubnets).build()).build();
