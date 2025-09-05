@@ -116,6 +116,7 @@ public class CdkApp {
 		checkEnvVariableNotEmpty("ECSARN");
 		checkEnvVariableNotEmpty("ECSROLE");
 		checkEnvVariableNotEmpty("ECRREPO");
+		checkEnvVariableNotEmpty("ECSASGROLE");
 	}
 
 	private static void checkEnvVariableWithDefaults(String variableName, Integer defaultVariableValue) {

@@ -64,6 +64,7 @@ import software.amazon.awscdk.services.ecs.Ec2TaskDefinition;
 import software.amazon.awscdk.services.ecs.ICluster;
 import software.amazon.awscdk.services.ecs.LogDriver;
 import software.amazon.awscdk.services.ecs.NetworkMode;
+import software.amazon.awscdk.services.ecs.PortMapping;
 import software.amazon.awscdk.services.ecs.Secret;
 import software.amazon.awscdk.services.iam.AnyPrincipal;
 import software.amazon.awscdk.services.iam.Effect;
@@ -108,6 +109,7 @@ public class CdkStack extends Stack {
 	private IVpc vpc;
 	private IInterfaceVpcEndpoint endpoint;
 	private DatabaseProxy dbProxy;
+	private DatabaseCluster dbCluster;
 
 	ISecret dbSecret;
 	ISecurityGroup dbprxysg;
@@ -365,7 +367,7 @@ public class CdkStack extends Stack {
 		// create cluster
 		ISecurityGroup dbsg = new SecurityGroup(stack, "auroraSecurityGroup",
 				SecurityGroupProps.builder().vpc(vpc).build());
-		DatabaseCluster dbCluster = DatabaseCluster.Builder.create(stack, "auroradb").engine(engine).parameterGroup(pg)
+		dbCluster = DatabaseCluster.Builder.create(stack, "auroradb").engine(engine).parameterGroup(pg)
 				.clusterIdentifier("ecomordmgmdb").writer(writer).securityGroups(Arrays.asList(dbsg)).vpc(vpc)
 				.vpcSubnets(SubnetSelection.builder().subnetType(SubnetType.PRIVATE_ISOLATED).build())
 				.storageType(DBClusterStorageType.AURORA).build();
@@ -421,21 +423,27 @@ public class CdkStack extends Stack {
 		Ec2TaskDefinition taskDefinition = Ec2TaskDefinition.Builder.create(this, jobName + "TskDef")
 				.networkMode(NetworkMode.AWS_VPC).executionRole(executionRole).taskRole(taskRole).build();
 
+		// create log group
 		LogGroup logGroup = LogGroup.Builder.create(this, jobName + "LogGroup").logGroupName("/ecs/" + jobName)
 				.retention(RetentionDays.ONE_DAY).build();
+		IRole asgRole = Role.fromRoleArn(this, "ECSASGROLE", System.getenv("ECSASGROLE"));
+		logGroup.grantWrite(asgRole);
 
 		// define container along with rds secret
 		String imageURI = System.getenv("ECRREPO") + ":" + jobName.toLowerCase();
 		ContainerDefinition container = taskDefinition.addContainer(jobName + "Container", ContainerDefinitionOptions
 				.builder().image(ContainerImage.fromRegistry(imageURI)).memoryLimitMiB(1024).cpu(1024)
-				.logging(LogDriver.awsLogs(AwsLogDriverProps.builder().logGroup(logGroup).streamPrefix("poc").build()))
+				.portMappings(List.of(PortMapping.builder().containerPort(8080).build()))
+				.logging(LogDriver.awsLogs(AwsLogDriverProps.builder().logGroup(logGroup).streamPrefix("ecom").build()))
 				.secrets(Map.of("SECRET", Secret.fromSecretsManager(dbSecret)))
-				.environment(Map.of("SECRET_ARN", dbSecret.getSecretArn(), "DBPRX_EP", dbProxy.getEndpoint())).build());
+				.environment(Map.of("DBPRX_EP", dbProxy.getEndpoint(), "INVAVLURL", System.getenv("INVAVLURL"))).build());
 
 		// fetch cluster & create service for task
 		ICluster cluster = Cluster.fromClusterAttributes(this, "ECOMECSCluster",
 				ClusterAttributes.builder().clusterName(System.getenv("ECSARN")).vpc(vpc).build());
 		Ec2Service service = Ec2Service.Builder.create(this, jobName + "Service").cluster(cluster)
+				.serviceName(jobName + "Service")
+				.vpcSubnets(SubnetSelection.builder().subnetType(SubnetType.PRIVATE_ISOLATED).build())
 				.taskDefinition(taskDefinition).desiredCount(1).build();
 	}
 

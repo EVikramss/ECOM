@@ -11,6 +11,11 @@ RunDDLFUNCRLID=$(aws cloudformation describe-stacks --stack-name COMMON --query 
 ECSARN=$(aws cloudformation describe-stacks --stack-name COMMON --query "Stacks[0].Outputs[?OutputKey=='ECSARN'].OutputValue" --output text)
 ECSROLE=$(aws cloudformation describe-stacks --stack-name COMMON --query "Stacks[0].Outputs[?OutputKey=='ECSROLE'].OutputValue" --output text)
 ECRREPO=$(aws cloudformation describe-stacks --stack-name COMMON --query "Stacks[0].Outputs[?OutputKey=='ECRREPO'].OutputValue" --output text)
+ECREPSGID=$(aws cloudformation describe-stacks --stack-name COMMON --query "Stacks[0].Outputs[?OutputKey=='ECREPSGID'].OutputValue" --output text)
+ECSASGROLE=$(aws cloudformation describe-stacks --stack-name COMMON --query "Stacks[0].Outputs[?OutputKey=='ECSASGROLE'].OutputValue" --output text)
+
+# inventory url
+INVAVLURL=$(aws cloudformation describe-stacks --stack-name ECOMINV --query "Stacks[0].Outputs[?OutputKey=='AvailabilityOpURL'].OutputValue" --output text)
 
 export VPCID
 export SMEPID
@@ -22,3 +27,6 @@ export RunDDLFUNCRLID
 export ECSARN
 export ECSROLE
 export ECRREPO
+export ECREPSGID
+export ECSASGROLE
+export INVAVLURL

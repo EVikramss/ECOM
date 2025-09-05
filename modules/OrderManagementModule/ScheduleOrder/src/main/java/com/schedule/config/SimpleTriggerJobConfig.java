@@ -26,16 +26,8 @@ public class SimpleTriggerJobConfig {
 
 	@Bean("SimpleTriggerJobTrigger")
 	public Trigger trigger() throws SchedulerException {
-		/*
-		 * return
-		 * TriggerBuilder.newTrigger().forJob(jobDetail).withIdentity("sampleTrigger")
-		 * .withSchedule(SimpleScheduleBuilder.simpleSchedule().withIntervalInSeconds(10
-		 * ).repeatForever()).build();
-		 */
-		
 		Trigger trigger = TriggerBuilder.newTrigger().forJob(jobDetail()).withIdentity("SimpleTriggerJobTrigger")
 				.startNow().build();
-
 		return trigger;
 	}
 

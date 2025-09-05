@@ -30,6 +30,10 @@ class Order:
             queries = queries + orderItem.getQueries()
         queries = queries + self.shippingAddress.getQueries()
         queries = queries + self.customerContact.getQueries()
+        
+        orderStatusKey = self.generateKey()
+        status = "0" # 0 for created
+        queries.append(f"INSERT INTO OrderStatus VALUES ('{status}','{self.orderNo}','{orderStatusKey}')")
         return queries
     
     # on validation return final result and each error
@@ -83,6 +87,12 @@ class Order:
         else:
             self.errorDescList.append(errorDesc)
         self.isPayloadValid = False;
+    
+    def generateKey(self):
+        now = datetime.now(timezone.utc)
+        timestamp = now.strftime("%Y%m%d%H%M%S")
+        random_number = random.randint(100000, 999999)
+        return f"{timestamp}{random_number}"
     
     def validateOrderData(self, payload):
         if "OrderNo" not in payload:

@@ -8,6 +8,8 @@ import software.amazon.awscdk.CfnOutput;
 import software.amazon.awscdk.Stack;
 import software.amazon.awscdk.StackProps;
 import software.amazon.awscdk.services.autoscaling.AutoScalingGroup;
+import software.amazon.awscdk.services.ec2.GatewayVpcEndpoint;
+import software.amazon.awscdk.services.ec2.GatewayVpcEndpointAwsService;
 import software.amazon.awscdk.services.ec2.ISecurityGroup;
 import software.amazon.awscdk.services.ec2.ISubnet;
 import software.amazon.awscdk.services.ec2.IVpc;
@@ -24,8 +26,8 @@ import software.amazon.awscdk.services.ec2.SubnetSelection;
 import software.amazon.awscdk.services.ec2.SubnetType;
 import software.amazon.awscdk.services.ec2.Vpc;
 import software.amazon.awscdk.services.ecr.Repository;
-import software.amazon.awscdk.services.ecs.AddCapacityOptions;
 import software.amazon.awscdk.services.ecs.AsgCapacityProvider;
+import software.amazon.awscdk.services.ecs.CapacityProviderStrategy;
 import software.amazon.awscdk.services.ecs.Cluster;
 import software.amazon.awscdk.services.ecs.EcsOptimizedImage;
 import software.amazon.awscdk.services.iam.Effect;
@@ -49,12 +51,17 @@ public class CdkStack extends Stack {
 	private IVpc vpc;
 	private InterfaceVpcEndpoint endpoint;
 	private ISecurityGroup smepsg;
+	private ISecurityGroup ecsepsg;
+	
 	private Bucket ecomBucket;
+	
 	private Function runDDLFunc;
 	private ISecurityGroup runDDLFuncSG;
+	
 	private Cluster cluster;
 	private Role ecsInstanceRole;
 	private Repository ecrrepo;
+	private AutoScalingGroup asg;
 
 	public CdkStack(final Construct scope, final String id, final StackProps props, Properties additionalProperties) {
 		super(scope, id, props);
@@ -76,34 +83,79 @@ public class CdkStack extends Stack {
 				.managedPolicies(List
 						.of(ManagedPolicy.fromAwsManagedPolicyName("service-role/AmazonEC2ContainerServiceforEC2Role")))
 				.build();
+		ecsInstanceRole.addManagedPolicy(ManagedPolicy.fromAwsManagedPolicyName("AmazonEC2ContainerRegistryReadOnly"));
 
 		// create ECS cluster
-		cluster = Cluster.Builder.create(this, "ECOMECSCluster").vpc(vpc).clusterName("ECOMECSCluster").build();
+		cluster = Cluster.Builder.create(this, "ECOMECSCluster").clusterName("ECOMECSCluster").containerInsights(false)
+				.vpc(vpc).build();
 
-		/*
-		 * // create ASG for ECS & add to cluster AutoScalingGroup asg =
-		 * AutoScalingGroup.Builder.create(this, "ECOMECSASG").vpc(vpc)
-		 * .instanceType(InstanceType.of(InstanceClass.BURSTABLE3, InstanceSize.MEDIUM))
-		 * .machineImage(EcsOptimizedImage.amazonLinux2()).minCapacity(2).maxCapacity(4)
-		 * .vpcSubnets(SubnetSelection.builder().subnetType(SubnetType.PRIVATE_ISOLATED)
-		 * .build()) .associatePublicIpAddress(false).build();
-		 * cluster.addAsgCapacityProvider(AsgCapacityProvider.Builder.create(this,
-		 * "ECOMECSASGCapProv")
-		 * .autoScalingGroup(asg).enableManagedTerminationProtection(true).build());
-		 */
+		// create ASG for ECS & add to cluster AutoScalingGroup asg - set outbound true,
+		// otherwise containers are not able to communicate back to ecs
+		ISecurityGroup asgsg = new SecurityGroup(this, "ECSASGSecurityGroup",
+				SecurityGroupProps.builder().vpc(vpc).allowAllOutbound(true).build());
+		asg = AutoScalingGroup.Builder.create(this, "ECOMECSASG").vpc(vpc)
+				.instanceType(InstanceType.of(InstanceClass.BURSTABLE3, InstanceSize.MEDIUM))
+				.machineImage(EcsOptimizedImage.amazonLinux2()).minCapacity(2).maxCapacity(4).securityGroup(asgsg)
+				.vpcSubnets(SubnetSelection.builder().subnetType(SubnetType.PRIVATE_ISOLATED).build())
+				.associatePublicIpAddress(false).build();
 
-		cluster.addCapacity("DefaultASGCapacity",
-				AddCapacityOptions.builder()
-						.instanceType(InstanceType.of(InstanceClass.BURSTABLE3, InstanceSize.MEDIUM))
-						.autoScalingGroupName("ECOMECSASG").desiredCapacity(2).maxCapacity(4)
-						.machineImage(EcsOptimizedImage.amazonLinux2())
-						.vpcSubnets(SubnetSelection.builder().subnetType(SubnetType.PRIVATE_ISOLATED).build())
-						.associatePublicIpAddress(false).canContainersAccessInstanceRole(true).spotPrice(null).build());
+		// register asg as capacity provider for ECS
+		AsgCapacityProvider capacityProvider = AsgCapacityProvider.Builder.create(this, "ECOMECSASGCapProv")
+				.capacityProviderName("ECOMECSASGCapProv").autoScalingGroup(asg).enableManagedScaling(true)
+				.enableManagedTerminationProtection(true).build();
+		cluster.addAsgCapacityProvider(capacityProvider);
 
-		// create ECR to hold docker images
+		// set default capacity provider
+		cluster.addDefaultCapacityProviderStrategy(List.of(CapacityProviderStrategy.builder()
+				.capacityProvider(capacityProvider.getCapacityProviderName()).weight(1).build()));
+
+		// create ECR to hold docker images & grant access to it
 		ecrrepo = Repository.Builder.create(this, "ecomrepo").repositoryName("ecomrepo").build();
-		//ecrrepo.grantRead(cluster.getAutoscalingGroup());
+		ecrrepo.grantRead(asg);
 		ecrrepo.grantRead(ecsInstanceRole);
+		
+		// create endpoints to communicate with ecs & cloudwatch logs - use same sg for all endpoints
+		List<ISubnet> privateSubnets = vpc.getIsolatedSubnets();
+		List<ISubnet> subPrivateSubnets = List.of(privateSubnets.get(0), privateSubnets.get(1));
+		ecsepsg = new SecurityGroup(this, "ECSEPSecurityGroup",
+				SecurityGroupProps.builder().vpc(vpc).allowAllOutbound(false).build());
+		ecsepsg.addIngressRule(asgsg, Port.HTTPS);
+		ecsepsg.addEgressRule(asgsg, Port.HTTPS);
+		asgsg.addEgressRule(ecsepsg, Port.HTTPS);
+		asgsg.addIngressRule(ecsepsg, Port.HTTPS);
+
+		InterfaceVpcEndpoint ecsEndpoint = InterfaceVpcEndpoint.Builder.create(this, "ECSInterfaceEndpoint").vpc(vpc)
+				.service(InterfaceVpcEndpointAwsService.ECS).privateDnsEnabled(true).securityGroups(List.of(ecsepsg))
+				.open(true).subnets(SubnetSelection.builder().subnets(subPrivateSubnets).build()).build();
+
+		InterfaceVpcEndpoint ecsAgentEndpoint = InterfaceVpcEndpoint.Builder.create(this, "ECSAgtInterfaceEndpoint").vpc(vpc)
+				.service(InterfaceVpcEndpointAwsService.ECS_AGENT).privateDnsEnabled(true)
+				.securityGroups(List.of(ecsepsg)).open(true)
+				.subnets(SubnetSelection.builder().subnets(subPrivateSubnets).build()).build();
+
+		InterfaceVpcEndpoint ecsTelEndpoint = InterfaceVpcEndpoint.Builder.create(this, "ECSTelInterfaceEndpoint").vpc(vpc)
+				.service(InterfaceVpcEndpointAwsService.ECS_TELEMETRY).privateDnsEnabled(true)
+				.securityGroups(List.of(ecsepsg)).open(true)
+				.subnets(SubnetSelection.builder().subnets(subPrivateSubnets).build()).build();
+
+		InterfaceVpcEndpoint ecrEndpoint = InterfaceVpcEndpoint.Builder.create(this, "ECRInterfaceEndpoint").vpc(vpc)
+				.service(InterfaceVpcEndpointAwsService.ECR).privateDnsEnabled(true).securityGroups(List.of(ecsepsg))
+				.open(true).subnets(SubnetSelection.builder().subnets(subPrivateSubnets).build()).build();
+
+		InterfaceVpcEndpoint ecrDckrEndpoint = InterfaceVpcEndpoint.Builder.create(this, "ECRDckrInterfaceEndpoint").vpc(vpc)
+				.service(InterfaceVpcEndpointAwsService.ECR_DOCKER).privateDnsEnabled(true)
+				.securityGroups(List.of(ecsepsg)).open(true)
+				.subnets(SubnetSelection.builder().subnets(subPrivateSubnets).build()).build();
+
+		// need s3 endpoint to pull image from ecr
+		GatewayVpcEndpoint s3Endpoint = GatewayVpcEndpoint.Builder.create(this, "S3GatewayEndpoint").vpc(vpc)
+				.service(GatewayVpcEndpointAwsService.S3).build();
+
+		// need log endpoint to write logs to log group
+		InterfaceVpcEndpoint logEndpoint = InterfaceVpcEndpoint.Builder.create(this, "ECRDckrInterfaceEndpoint").vpc(vpc)
+				.service(InterfaceVpcEndpointAwsService.CLOUDWATCH_LOGS).privateDnsEnabled(true)
+				.securityGroups(List.of(ecsepsg)).open(true)
+				.subnets(SubnetSelection.builder().subnets(subPrivateSubnets).build()).build();
 	}
 
 	private void setupRunDDLLambda(String baseDir) {
@@ -174,5 +226,7 @@ public class CdkStack extends Stack {
 		CfnOutput.Builder.create(this, "ECSARN").value(cluster.getClusterArn()).build();
 		CfnOutput.Builder.create(this, "ECSROLE").value(ecsInstanceRole.getRoleArn()).build();
 		CfnOutput.Builder.create(this, "ECRREPO").value(ecrrepo.getRepositoryUri()).build();
+		CfnOutput.Builder.create(this, "ECREPSGID").value(ecsepsg.getSecurityGroupId()).build();
+		CfnOutput.Builder.create(this, "ECSASGROLE").value(asg.getRole().getRoleArn()).build();
 	}
 }

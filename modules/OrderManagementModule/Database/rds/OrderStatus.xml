@@ -1,0 +1,22 @@
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+	<changeSet id="202508181000-1" author="user">
+		<createTable tableName="OrderStatus">
+			<column name="status" type="INT">
+				<constraints nullable="false" />
+			</column>
+			<column name="orderNo" type="varchar(40)">
+				<constraints nullable="false" />
+			</column>
+			<column name="orderstatuskey" type="varchar(32)">
+				<constraints primaryKey="true" nullable="false" />
+			</column>
+		</createTable>
+		<createIndex indexName="orderStatus_ind1" tableName="OrderStatus">
+			<column name="status"/>
+		</createIndex>
+		<createIndex indexName="orderStatus_ind2" tableName="OrderStatus">
+			<column name="orderNo"/>
+		</createIndex>
+   </changeSet>
+</databaseChangeLog>
