@@ -133,20 +133,17 @@ public class CdkStack extends Stack {
 		String readReplicaCount = System.getenv("dbreadRplCnt");
 		if (readReplicaCount != null && readReplicaCount.trim().length() > 0)
 			dbreadRplCnt = Integer.parseInt(readReplicaCount);
+		
+		String baseDir = "/home/ec2-user/deploymentWorkspace2/modules/OrderManagementModule/";
 
 		lookupNetwork();
 		lookupEndpoints();
 		createAuroraPostgresDB(dbreadRplCnt);
-		checkAndSetupLambdaBackedAPIs();
+		setupOrderConsole(baseDir);
 		setupECSJobs();
 
 		// record output variables
 		setupOutputVariables();
-	}
-
-	private void checkAndSetupLambdaBackedAPIs() {
-		String baseDir = "/home/ec2-user/deploymentWorkspace2/modules/OrderManagementModule/";
-		setupOrderConsole(baseDir);
 	}
 
 	private void setupOrderConsole(String baseDir) {
@@ -399,15 +396,18 @@ public class CdkStack extends Stack {
 	}
 
 	private void setupECSJobs() {
-		String baseDir = "/home/ec2-user/deploymentWorkspace2/modules/OrderManagementModule/";
 		IRole asgRole = Role.fromRoleArn(this, "ECSASGROLE", System.getenv("ECSASGROLE"));
-		setupECSJob(baseDir, "CreateOrder", asgRole);
-		setupECSJob(baseDir, "ScheduleOrder", asgRole);
-		setupECSJob(baseDir, "ShipOrder", asgRole);
-		setupECSJob(baseDir, "GetData", asgRole);
+		ICluster cluster = Cluster.fromClusterAttributes(this, "ECOMECSCluster",
+				ClusterAttributes.builder().clusterName(System.getenv("ECSARN")).vpc(vpc).build());
+
+		String baseDir = "/home/ec2-user/deploymentWorkspace2/modules/OrderManagementModule/";
+		setupECSJob(baseDir, "CreateOrder", asgRole, cluster);
+		setupECSJob(baseDir, "ScheduleOrder", asgRole, cluster);
+		setupECSJob(baseDir, "ShipOrder", asgRole, cluster);
+		setupECSJob(baseDir, "GetData", asgRole, cluster);
 	}
 
-	private void setupECSJob(String baseDir, String jobName, IRole asgRole) {
+	private void setupECSJob(String baseDir, String jobName, IRole asgRole, ICluster cluster) {
 		// create roles for ecs job
 		Role executionRole = Role.Builder.create(this, jobName + "TskExecRole")
 				.assumedBy(new ServicePrincipal("ecs-tasks.amazonaws.com"))
@@ -442,9 +442,7 @@ public class CdkStack extends Stack {
 				.environment(Map.of("DBPRX_EP", dbProxy.getEndpoint(), "INVAVLURL", System.getenv("INVAVLURL")))
 				.build());
 
-		// fetch cluster & create service for task
-		ICluster cluster = Cluster.fromClusterAttributes(this, "ECOMECSCluster",
-				ClusterAttributes.builder().clusterName(System.getenv("ECSARN")).vpc(vpc).build());
+		// create service for task
 		Ec2Service service = Ec2Service.Builder.create(this, jobName + "Service").cluster(cluster)
 				.serviceName(jobName + "Service")
 				.vpcSubnets(SubnetSelection.builder().subnetType(SubnetType.PRIVATE_ISOLATED).build())
