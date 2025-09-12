@@ -42,10 +42,10 @@ pipeline {
 					getDataMem = params['Get Data Memory'].toInteger()
 					getDataCPU = params['Get Data CPU'].toInteger()
 					
-					checkContainerMemCPU(createOrderMem, createOrderCPU, 'Create Order')
-					checkContainerMemCPU(scheduleOrderMem, scheduleOrderCPU, 'Schedule Order')
-					checkContainerMemCPU(shipOrderMem, shipOrderCPU, 'Ship Order')
-					checkContainerMemCPU(getDataMem, getDataCPU, 'Get Data')
+					checkContainerMemCPU(createOrderMem, createOrderCPU, maxContainerMemory, maxContainerCPU, 'Create Order')
+					checkContainerMemCPU(scheduleOrderMem, scheduleOrderCPU, maxContainerMemory, maxContainerCPU, 'Schedule Order')
+					checkContainerMemCPU(shipOrderMem, shipOrderCPU, maxContainerMemory, maxContainerCPU, 'Ship Order')
+					checkContainerMemCPU(getDataMem, getDataCPU, maxContainerMemory, maxContainerCPU, 'Get Data')
 				}
             }
         }
@@ -384,7 +384,7 @@ def checkConcurrency(int reservedConc, int provConc, String subModuleName) {
 	}
 }
 
-def checkContainerMemCPU(mem, cpu, subModuleName) {
+def checkContainerMemCPU(mem, cpu, maxContainerMemory, maxContainerCPU, subModuleName) {
 	if (mem > maxContainerMemory) {
 		error(subModuleName + ': memory greater than max memory')
 	}
