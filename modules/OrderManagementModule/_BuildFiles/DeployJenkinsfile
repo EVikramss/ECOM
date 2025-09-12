@@ -3,14 +3,24 @@ def repoPath
 def isDBExisting = true
 def isCreateOrderExisting = true
 def isScheduleOrderExisting = true
+def isShipOrderExisting = true
+def isGetDataExisting = true
 def isOrderConsoleExisting = true
 def areAllServicesExisting = true
 def runCDK = false
 
 // define variables for parameters
-def crOrdResConc
-def crOrdProvConc
+def createOrderMem;
+def createOrderCPU;
+def scheduleOrderMem;
+def scheduleOrderCPU;
+def shipOrderMem;
+def shipOrderCPU;
+def getDataMem;
+def getDataCPU;
 def totalConcurrencyLimit = 360
+def maxContainerMemory = 1024
+def maxContainerCPU = 1024
 
 pipeline {
     agent any
@@ -23,12 +33,19 @@ pipeline {
 		stage('validateInput') {
             steps {
 				script {
-					crOrdResConc = params['Create Order Reserved Concurrency'].toInteger()
-					crOrdProvConc = params['Create Order Provisioned Concurrency'].toInteger()
+					createOrderMem = params['Create Order Memory'].toInteger()
+					createOrderCPU = params['Create Order CPU'].toInteger()
+					scheduleOrderMem = params['Schedule Order Memory'].toInteger()
+					scheduleOrderCPU = params['Schedule Order CPU'].toInteger()
+					shipOrderMem = params['Ship Order Memory'].toInteger()
+					shipOrderCPU = params['Ship Order CPU'].toInteger()
+					getDataMem = params['Get Data Memory'].toInteger()
+					getDataCPU = params['Get Data CPU'].toInteger()
 					
-					checkConcurrency(crOrdResConc, crOrdProvConc, 'Create Order')
-					
-					checkOverallReservedConcurrency(crOrdResConc, totalConcurrencyLimit)
+					checkContainerMemCPU(createOrderMem, createOrderCPU, 'Create Order')
+					checkContainerMemCPU(scheduleOrderMem, scheduleOrderCPU, 'Schedule Order')
+					checkContainerMemCPU(shipOrderMem, shipOrderCPU, 'Ship Order')
+					checkContainerMemCPU(getDataMem, getDataCPU, 'Get Data')
 				}
             }
         }
@@ -69,6 +86,14 @@ pipeline {
 					scriptPath = "${repoPath}/modules/OrderManagementModule/ScheduleOrder/_scripts/checkExisting.sh"
 					isScheduleOrderExisting = checkIfExisting(scriptPath)
 					areAllServicesExisting = areAllServicesExisting && isScheduleOrderExisting
+					
+					scriptPath = "${repoPath}/modules/OrderManagementModule/ShipOrder/_scripts/checkExisting.sh"
+					isShipOrderExisting = checkIfExisting(scriptPath)
+					areAllServicesExisting = areAllServicesExisting && isShipOrderExisting
+					
+					scriptPath = "${repoPath}/modules/OrderManagementModule/GetData/_scripts/checkExisting.sh"
+					isGetDataExisting = checkIfExisting(scriptPath)
+					areAllServicesExisting = areAllServicesExisting && isGetDataExisting
 					
 					if (params['Deploy Order Management Module']) {
 						runCDK = true
@@ -130,6 +155,22 @@ pipeline {
 							}
 						}
 						
+						if (!isShipOrderExisting) {
+							def scriptPath = "${repoPath}/modules/OrderManagementModule/ShipOrder/_scripts/preDeploy.sh"
+							if (fileExists(scriptPath)) {
+								echo "Executing ${scriptPath}"
+								sh "${scriptPath}"
+							}
+						}
+						
+						if (!isGetDataExisting) {
+							def scriptPath = "${repoPath}/modules/OrderManagementModule/GetData/_scripts/preDeploy.sh"
+							if (fileExists(scriptPath)) {
+								echo "Executing ${scriptPath}"
+								sh "${scriptPath}"
+							}
+						}
+						
 						echo "PreDeploy step complete"
 					}
                 }
@@ -144,7 +185,7 @@ pipeline {
 						
 						def mainScriptPath = "${repoPath}/modules/OrderManagementModule/_scripts/deploy.sh"
 						echo "Executing ${mainScriptPath}"
-						sh "${mainScriptPath} \"${crOrdResConc}\" \"${crOrdProvConc}\""
+						sh "${mainScriptPath} \"${createOrderMem}\" \"${createOrderCPU}\" \"${scheduleOrderMem}\" \"${scheduleOrderCPU}\" \"${shipOrderMem}\" \"${shipOrderCPU}\" \"${getDataMem}\" \"${getDataCPU}\""
 						
 						def auxScriptPath = "${repoPath}/modules/OrderManagementModule/Console/ui/_scripts/deploy.sh"
 						echo "Executing ${auxScriptPath}"
@@ -214,6 +255,22 @@ pipeline {
 							}
 						}
 						
+						if (!isShipOrderExisting) {
+							def scriptPath = "${repoPath}/modules/OrderManagementModule/ShipOrder/_scripts/postDeploy.sh"
+							if (fileExists(scriptPath)) {
+								echo "Executing ${scriptPath}"
+								sh "${scriptPath}"
+							}
+						}
+						
+						if (!isGetDataExisting) {
+							def scriptPath = "${repoPath}/modules/OrderManagementModule/GetData/_scripts/postDeploy.sh"
+							if (fileExists(scriptPath)) {
+								echo "Executing ${scriptPath}"
+								sh "${scriptPath}"
+							}
+						}
+						
 						echo "PostDeploy step complete"
 					}
                 }
@@ -237,7 +294,7 @@ pipeline {
 						def scriptPath = "${repoPath}/modules/OrderManagementModule/CreateOrder/_scripts/updateDeployment.sh"
 						if (fileExists(scriptPath)) {
 							echo "Executing ${scriptPath}"
-							sh "${scriptPath} \"${cnsDmndResConc}\" \"${cnsDmndProvConc}\""
+							sh "${scriptPath} \"${createOrderMem}\" \"${createOrderCPU}\""
 						}
 					}
 					
@@ -245,7 +302,7 @@ pipeline {
 						def scriptPath = "${repoPath}/modules/OrderManagementModule/Console/_scripts/updateDeployment.sh"
 						if (fileExists(scriptPath)) {
 							echo "Executing ${scriptPath}"
-							sh "${scriptPath} \"${getAvlResConc}\" \"${getAvlProvConc}\""
+							sh "${scriptPath}"
 						}
 					}
 					
@@ -253,7 +310,23 @@ pipeline {
 						def scriptPath = "${repoPath}/modules/OrderManagementModule/ScheduleOrder/_scripts/updateDeployment.sh"
 						if (fileExists(scriptPath)) {
 							echo "Executing ${scriptPath}"
-							sh "${scriptPath}"
+							sh "${scriptPath} \"${scheduleOrderMem}\" \"${scheduleOrderCPU}\""
+						}
+					}
+					
+					if (params['Update Ship Order service'] && isShipOrderExisting) {
+						def scriptPath = "${repoPath}/modules/OrderManagementModule/ShipOrder/_scripts/updateDeployment.sh"
+						if (fileExists(scriptPath)) {
+							echo "Executing ${scriptPath}"
+							sh "${scriptPath} \"${shipOrderMem}\" \"${shipOrderCPU}\""
+						}
+					}
+					
+					if (params['Update Get Data service'] && isGetDataExisting) {
+						def scriptPath = "${repoPath}/modules/OrderManagementModule/GetData/_scripts/updateDeployment.sh"
+						if (fileExists(scriptPath)) {
+							echo "Executing ${scriptPath}"
+							sh "${scriptPath} \"${getDataMem}\" \"${getDataCPU}\""
 						}
 					}
 					
@@ -308,6 +381,16 @@ def checkIfExisting(String scriptPath) {
 def checkConcurrency(int reservedConc, int provConc, String subModuleName) {
 	if (provConc > reservedConc) {
 		error(subModuleName + ': provisioned concurrency greater than reserved concurrency')
+	}
+}
+
+def checkContainerMemCPU(mem, cpu, subModuleName) {
+	if (mem > maxContainerMemory) {
+		error(subModuleName + ': memory greater than max memory')
+	}
+	
+	if (cpu > maxContainerCPU) {
+		error(subModuleName + ': cpu greater than max cpu')
 	}
 }
 

@@ -401,7 +401,10 @@ public class CdkStack extends Stack {
 
 	private void setupECSJobs() {
 		String baseDir = "/home/ec2-user/deploymentWorkspace2/modules/OrderManagementModule/";
+		setupECSJob(baseDir, "CreateOrder");
 		setupECSJob(baseDir, "ScheduleOrder");
+		setupECSJob(baseDir, "ShipOrder");
+		setupECSJob(baseDir, "GetData");
 	}
 
 	private void setupECSJob(String baseDir, String jobName) {
@@ -432,11 +435,13 @@ public class CdkStack extends Stack {
 		// define container along with rds secret
 		String imageURI = System.getenv("ECRREPO") + ":" + jobName.toLowerCase();
 		ContainerDefinition container = taskDefinition.addContainer(jobName + "Container", ContainerDefinitionOptions
-				.builder().image(ContainerImage.fromRegistry(imageURI)).memoryLimitMiB(1024).cpu(1024)
+				.builder().image(ContainerImage.fromRegistry(imageURI))
+				.memoryLimitMiB(Integer.parseInt(System.getenv(jobName + "MEM"))).cpu(Integer.parseInt(System.getenv(jobName + "CPU")))
 				.portMappings(List.of(PortMapping.builder().containerPort(8080).build()))
 				.logging(LogDriver.awsLogs(AwsLogDriverProps.builder().logGroup(logGroup).streamPrefix("ecom").build()))
 				.secrets(Map.of("SECRET", Secret.fromSecretsManager(dbSecret)))
-				.environment(Map.of("DBPRX_EP", dbProxy.getEndpoint(), "INVAVLURL", System.getenv("INVAVLURL"))).build());
+				.environment(Map.of("DBPRX_EP", dbProxy.getEndpoint(), "INVAVLURL", System.getenv("INVAVLURL")))
+				.build());
 
 		// fetch cluster & create service for task
 		ICluster cluster = Cluster.fromClusterAttributes(this, "ECOMECSCluster",

@@ -1,11 +1,12 @@
 #!/bin/bash
 
-FUNCTION_NAME="ECOMORDMGMCreateOrder"
+jobName="createorder"
+ECRREPO=$(aws cloudformation describe-stacks --stack-name COMMON --query "Stacks[0].Outputs[?OutputKey=='ECRREPO'].OutputValue" --output text)
 
-if aws lambda get-function --region us-east-1 --function-name "$FUNCTION_NAME" > /dev/null 2>&1; then
-    echo "Lambda function '$FUNCTION_NAME' exists."
+if aws ecr describe-images --repository-name ecomrepo --image-ids imageTag="$jobName" --region us-east-1 > /dev/null 2>&1; then
+    echo "Image '$jobName' exists."
 	exit 1
 else
-    echo "Lambda function '$FUNCTION_NAME' does not exist."
+    echo "Image '$jobName' does not exist."
 	exit 0
 fi

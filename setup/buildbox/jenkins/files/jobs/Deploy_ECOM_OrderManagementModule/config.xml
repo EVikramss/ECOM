@@ -102,6 +102,14 @@ return &quot;&quot;&quot;&lt;div style=&apos;text-align: center; font-weight: bo
           <name>Update Schedule Order service</name>
           <defaultValue>false</defaultValue>
         </hudson.model.BooleanParameterDefinition>
+		<hudson.model.BooleanParameterDefinition>
+          <name>Update Ship Order service</name>
+          <defaultValue>false</defaultValue>
+        </hudson.model.BooleanParameterDefinition>
+		<hudson.model.BooleanParameterDefinition>
+          <name>Update Get Data service</name>
+          <defaultValue>false</defaultValue>
+        </hudson.model.BooleanParameterDefinition>
 		<org.biouno.unochoice.DynamicReferenceParameter plugin="uno-choice@2.8.8">
           <name></name>
           <randomName>choice-parameter-7620214171090</randomName>
@@ -218,13 +226,106 @@ return &quot;&quot;&quot;&lt;div style=&apos;text-align: center; font-weight: bo
           <omitValueField>false</omitValueField>
         </org.biouno.unochoice.DynamicReferenceParameter>
 		<hudson.model.StringParameterDefinition>
-          <name>Create Order Reserved Concurrency</name>
-          <defaultValue>0</defaultValue>
+          <name>Create Order Memory</name>
+          <defaultValue>512</defaultValue>
           <trim>true</trim>
         </hudson.model.StringParameterDefinition>
 		<hudson.model.StringParameterDefinition>
-          <name>Create Order Provisioned Concurrency</name>
-          <defaultValue>0</defaultValue>
+          <name>Create Order CPU</name>
+          <defaultValue>512</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+		<org.biouno.unochoice.DynamicReferenceParameter plugin="uno-choice@2.8.8">
+          <name></name>
+          <randomName>choice-parameter-341330091857100</randomName>
+          <visibleItemCount>1</visibleItemCount>
+          <script class="org.biouno.unochoice.model.GroovyScript">
+            <secureScript plugin="script-security@1373.vb_b_4a_a_c26fa_00">
+              <script>return &quot;&lt;hr style=&apos;border: 1px solid #ccc; margin: 5px 0;&apos;&gt;&quot;</script>
+              <sandbox>true</sandbox>
+            </secureScript>
+            <secureFallbackScript plugin="script-security@1373.vb_b_4a_a_c26fa_00">
+              <script></script>
+              <sandbox>true</sandbox>
+            </secureFallbackScript>
+          </script>
+          <projectName>Deploy_ECOM_OrderManagementModule</projectName>
+          <projectFullName>Deploy_ECOM_OrderManagementModule</projectFullName>
+          <parameters class="linked-hash-map"/>
+          <referencedParameters></referencedParameters>
+          <choiceType>ET_FORMATTED_HTML</choiceType>
+          <omitValueField>false</omitValueField>
+        </org.biouno.unochoice.DynamicReferenceParameter>
+		<hudson.model.StringParameterDefinition>
+          <name>Schedule Order Memory</name>
+          <defaultValue>512</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+		<hudson.model.StringParameterDefinition>
+          <name>Schedule Order CPU</name>
+          <defaultValue>512</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+		<org.biouno.unochoice.DynamicReferenceParameter plugin="uno-choice@2.8.8">
+          <name></name>
+          <randomName>choice-parameter-341330091857100</randomName>
+          <visibleItemCount>1</visibleItemCount>
+          <script class="org.biouno.unochoice.model.GroovyScript">
+            <secureScript plugin="script-security@1373.vb_b_4a_a_c26fa_00">
+              <script>return &quot;&lt;hr style=&apos;border: 1px solid #ccc; margin: 5px 0;&apos;&gt;&quot;</script>
+              <sandbox>true</sandbox>
+            </secureScript>
+            <secureFallbackScript plugin="script-security@1373.vb_b_4a_a_c26fa_00">
+              <script></script>
+              <sandbox>true</sandbox>
+            </secureFallbackScript>
+          </script>
+          <projectName>Deploy_ECOM_OrderManagementModule</projectName>
+          <projectFullName>Deploy_ECOM_OrderManagementModule</projectFullName>
+          <parameters class="linked-hash-map"/>
+          <referencedParameters></referencedParameters>
+          <choiceType>ET_FORMATTED_HTML</choiceType>
+          <omitValueField>false</omitValueField>
+        </org.biouno.unochoice.DynamicReferenceParameter>
+		<hudson.model.StringParameterDefinition>
+          <name>Ship Order Memory</name>
+          <defaultValue>512</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+		<hudson.model.StringParameterDefinition>
+          <name>Ship Order CPU</name>
+          <defaultValue>512</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+		<org.biouno.unochoice.DynamicReferenceParameter plugin="uno-choice@2.8.8">
+          <name></name>
+          <randomName>choice-parameter-341330091857100</randomName>
+          <visibleItemCount>1</visibleItemCount>
+          <script class="org.biouno.unochoice.model.GroovyScript">
+            <secureScript plugin="script-security@1373.vb_b_4a_a_c26fa_00">
+              <script>return &quot;&lt;hr style=&apos;border: 1px solid #ccc; margin: 5px 0;&apos;&gt;&quot;</script>
+              <sandbox>true</sandbox>
+            </secureScript>
+            <secureFallbackScript plugin="script-security@1373.vb_b_4a_a_c26fa_00">
+              <script></script>
+              <sandbox>true</sandbox>
+            </secureFallbackScript>
+          </script>
+          <projectName>Deploy_ECOM_OrderManagementModule</projectName>
+          <projectFullName>Deploy_ECOM_OrderManagementModule</projectFullName>
+          <parameters class="linked-hash-map"/>
+          <referencedParameters></referencedParameters>
+          <choiceType>ET_FORMATTED_HTML</choiceType>
+          <omitValueField>false</omitValueField>
+        </org.biouno.unochoice.DynamicReferenceParameter>
+		<hudson.model.StringParameterDefinition>
+          <name>Get Data Memory</name>
+          <defaultValue>512</defaultValue>
+          <trim>true</trim>
+        </hudson.model.StringParameterDefinition>
+		<hudson.model.StringParameterDefinition>
+          <name>Get Data CPU</name>
+          <defaultValue>512</defaultValue>
           <trim>true</trim>
         </hudson.model.StringParameterDefinition>
 		<org.biouno.unochoice.DynamicReferenceParameter plugin="uno-choice@2.8.8">

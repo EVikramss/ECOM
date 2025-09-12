@@ -104,8 +104,15 @@ public class CdkApp {
 			deploymentRegion = "us-east-1";
 		}
 
-		checkEnvVariableWithDefaults("CreateOrderResvConcurrency", 0);
-		checkEnvVariableWithDefaults("CreateOrderProvConcurrency", 0);
+		checkEnvVariableWithDefaults("CreateOrderMEM", 512);
+		checkEnvVariableWithDefaults("CreateOrderCPU", 512);
+		checkEnvVariableWithDefaults("ScheduleOrderMEM", 512);
+		checkEnvVariableWithDefaults("ScheduleOrderCPU", 512);
+		checkEnvVariableWithDefaults("ShipOrderMEM", 512);
+		checkEnvVariableWithDefaults("ShipOrderCPU", 512);
+		checkEnvVariableWithDefaults("GetDataMEM", 512);
+		checkEnvVariableWithDefaults("GetDataCPU", 512);
+		
 		checkEnvVariableNotEmpty("VPCID");
 		checkEnvVariableNotEmpty("SMEPID");
 		checkEnvVariableNotEmpty("SMSGID");

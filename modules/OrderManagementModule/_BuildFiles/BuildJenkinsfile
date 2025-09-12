@@ -9,6 +9,7 @@ pipeline {
 		stage('SetPermissions') {
             steps {
                 echo "SetPermissions"
+				sh 'rm -rf docs'
 				sh 'chmod -R +x modules/OrderManagementModule'
             }
         }
