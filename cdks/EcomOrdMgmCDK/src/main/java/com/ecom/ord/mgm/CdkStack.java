@@ -146,7 +146,6 @@ public class CdkStack extends Stack {
 
 	private void checkAndSetupLambdaBackedAPIs() {
 		String baseDir = "/home/ec2-user/deploymentWorkspace2/modules/OrderManagementModule/";
-		setupLambdaBackedAPI("CreateOrder", baseDir, true, false);
 		setupOrderConsole(baseDir);
 	}
 
