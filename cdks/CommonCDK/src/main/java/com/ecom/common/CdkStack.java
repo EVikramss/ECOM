@@ -52,6 +52,7 @@ public class CdkStack extends Stack {
 	private InterfaceVpcEndpoint endpoint;
 	private ISecurityGroup smepsg;
 	private ISecurityGroup ecsepsg;
+	private ISecurityGroup asgsg;
 	
 	private Bucket ecomBucket;
 	
@@ -91,7 +92,7 @@ public class CdkStack extends Stack {
 
 		// create ASG for ECS & add to cluster AutoScalingGroup asg - set outbound true,
 		// otherwise containers are not able to communicate back to ecs
-		ISecurityGroup asgsg = new SecurityGroup(this, "ECSASGSecurityGroup",
+		asgsg = new SecurityGroup(this, "ECSASGSecurityGroup",
 				SecurityGroupProps.builder().vpc(vpc).allowAllOutbound(true).build());
 		asg = AutoScalingGroup.Builder.create(this, "ECOMECSASG").vpc(vpc)
 				.instanceType(InstanceType.of(InstanceClass.BURSTABLE3, InstanceSize.MEDIUM))
@@ -228,5 +229,6 @@ public class CdkStack extends Stack {
 		CfnOutput.Builder.create(this, "ECRREPO").value(ecrrepo.getRepositoryUri()).build();
 		CfnOutput.Builder.create(this, "ECREPSGID").value(ecsepsg.getSecurityGroupId()).build();
 		CfnOutput.Builder.create(this, "ECSASGROLE").value(asg.getRole().getRoleArn()).build();
+		CfnOutput.Builder.create(this, "ECSASGSG").value(asgsg.getSecurityGroupId()).build();
 	}
 }

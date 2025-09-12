@@ -98,6 +98,7 @@ import software.amazon.awscdk.services.rds.ProvisionedClusterInstanceProps;
 import software.amazon.awscdk.services.s3.Bucket;
 import software.amazon.awscdk.services.s3.IBucket;
 import software.amazon.awscdk.services.secretsmanager.ISecret;
+import software.amazon.awscdk.services.sqs.Queue;
 import software.constructs.Construct;
 
 public class CdkStack extends Stack {
@@ -119,6 +120,8 @@ public class CdkStack extends Stack {
 	private UserPoolDomain userPoolDomain;
 	private UserPoolClient userPoolClient;
 	private UserPool userPool;
+	
+	private Queue createOrderQ;
 
 	private CfnApp amplifyApp;
 	private GraphqlApi appSyncAPI;
@@ -133,17 +136,24 @@ public class CdkStack extends Stack {
 		String readReplicaCount = System.getenv("dbreadRplCnt");
 		if (readReplicaCount != null && readReplicaCount.trim().length() > 0)
 			dbreadRplCnt = Integer.parseInt(readReplicaCount);
-		
+
 		String baseDir = "/home/ec2-user/deploymentWorkspace2/modules/OrderManagementModule/";
 
 		lookupNetwork();
 		lookupEndpoints();
 		createAuroraPostgresDB(dbreadRplCnt);
 		setupOrderConsole(baseDir);
+		setupSQS();
 		setupECSJobs();
 
 		// record output variables
 		setupOutputVariables();
+	}
+
+	private void setupSQS() {
+		createOrderQ = Queue.Builder.create(this, "CreateOrderQ")
+		.queueName("CreateOrderQ").retentionPeriod(Duration.days(1))
+				.build();
 	}
 
 	private void setupOrderConsole(String baseDir) {
@@ -397,17 +407,27 @@ public class CdkStack extends Stack {
 
 	private void setupECSJobs() {
 		IRole asgRole = Role.fromRoleArn(this, "ECSASGROLE", System.getenv("ECSASGROLE"));
+		ISecurityGroup asgsg = SecurityGroup.fromLookupById(this, "ECSASGSG", System.getenv("ECSASGSG"));
 		ICluster cluster = Cluster.fromClusterAttributes(this, "ECOMECSCluster",
 				ClusterAttributes.builder().clusterName(System.getenv("ECSARN")).vpc(vpc).build());
 
+		// grant consume msg from q
+		createOrderQ.grantConsumeMessages(asgRole);
+		
+		// add asg role to db proxy sg
+		dbprxysg.addIngressRule(asgsg, Port.POSTGRES);
+		smepsg.addIngressRule(asgsg, Port.HTTPS);
+		asgsg.addEgressRule(dbprxysg, Port.POSTGRES);
+		asgsg.addEgressRule(smepsg, Port.HTTPS);
+
 		String baseDir = "/home/ec2-user/deploymentWorkspace2/modules/OrderManagementModule/";
-		setupECSJob(baseDir, "CreateOrder", asgRole, cluster);
-		setupECSJob(baseDir, "ScheduleOrder", asgRole, cluster);
-		setupECSJob(baseDir, "ShipOrder", asgRole, cluster);
-		setupECSJob(baseDir, "GetData", asgRole, cluster);
+		setupECSJob(baseDir, "CreateOrder", asgRole, asgsg, cluster);
+		setupECSJob(baseDir, "ScheduleOrder", asgRole, asgsg, cluster);
+		setupECSJob(baseDir, "ShipOrder", asgRole, asgsg, cluster);
+		setupECSJob(baseDir, "GetData", asgRole, asgsg, cluster);
 	}
 
-	private void setupECSJob(String baseDir, String jobName, IRole asgRole, ICluster cluster) {
+	private void setupECSJob(String baseDir, String jobName, IRole asgRole, ISecurityGroup asgsg, ICluster cluster) {
 		// create roles for ecs job
 		Role executionRole = Role.Builder.create(this, jobName + "TskExecRole")
 				.assumedBy(new ServicePrincipal("ecs-tasks.amazonaws.com"))
@@ -435,16 +455,17 @@ public class CdkStack extends Stack {
 		String imageURI = System.getenv("ECRREPO") + ":" + jobName.toLowerCase();
 		ContainerDefinition container = taskDefinition.addContainer(jobName + "Container", ContainerDefinitionOptions
 				.builder().image(ContainerImage.fromRegistry(imageURI))
-				.memoryLimitMiB(Integer.parseInt(System.getenv(jobName + "MEM"))).cpu(Integer.parseInt(System.getenv(jobName + "CPU")))
+				.memoryLimitMiB(Integer.parseInt(System.getenv(jobName + "MEM")))
+				.cpu(Integer.parseInt(System.getenv(jobName + "CPU")))
 				.portMappings(List.of(PortMapping.builder().containerPort(8080).build()))
 				.logging(LogDriver.awsLogs(AwsLogDriverProps.builder().logGroup(logGroup).streamPrefix("ecom").build()))
 				.secrets(Map.of("SECRET", Secret.fromSecretsManager(dbSecret)))
 				.environment(Map.of("DBPRX_EP", dbProxy.getEndpoint(), "INVAVLURL", System.getenv("INVAVLURL")))
 				.build());
 
-		// create service for task
+		// create service for task - use same sg as asg
 		Ec2Service service = Ec2Service.Builder.create(this, jobName + "Service").cluster(cluster)
-				.serviceName(jobName + "Service")
+				.serviceName(jobName + "Service").securityGroups(List.of(asgsg))
 				.vpcSubnets(SubnetSelection.builder().subnetType(SubnetType.PRIVATE_ISOLATED).build())
 				.taskDefinition(taskDefinition).desiredCount(1).build();
 	}

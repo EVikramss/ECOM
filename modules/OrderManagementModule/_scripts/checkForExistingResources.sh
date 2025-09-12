@@ -13,6 +13,7 @@ ECSROLE=$(aws cloudformation describe-stacks --stack-name COMMON --query "Stacks
 ECRREPO=$(aws cloudformation describe-stacks --stack-name COMMON --query "Stacks[0].Outputs[?OutputKey=='ECRREPO'].OutputValue" --output text)
 ECREPSGID=$(aws cloudformation describe-stacks --stack-name COMMON --query "Stacks[0].Outputs[?OutputKey=='ECREPSGID'].OutputValue" --output text)
 ECSASGROLE=$(aws cloudformation describe-stacks --stack-name COMMON --query "Stacks[0].Outputs[?OutputKey=='ECSASGROLE'].OutputValue" --output text)
+ECSASGSG=$(aws cloudformation describe-stacks --stack-name COMMON --query "Stacks[0].Outputs[?OutputKey=='ECSASGSG'].OutputValue" --output text)
 
 # inventory url
 INVAVLURL=$(aws cloudformation describe-stacks --stack-name ECOMINV --query "Stacks[0].Outputs[?OutputKey=='AvailabilityOpURL'].OutputValue" --output text)
@@ -30,3 +31,4 @@ export ECRREPO
 export ECREPSGID
 export ECSASGROLE
 export INVAVLURL
+export ECSASGSG
