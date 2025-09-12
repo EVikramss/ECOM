@@ -146,6 +146,7 @@ public class CdkStack extends Stack {
 
 	private void checkAndSetupLambdaBackedAPIs() {
 		String baseDir = "/home/ec2-user/deploymentWorkspace2/modules/OrderManagementModule/";
+		setupLambdaBackedAPI("CreateOrder", baseDir, true, false);
 		setupOrderConsole(baseDir);
 	}
 
@@ -400,13 +401,14 @@ public class CdkStack extends Stack {
 
 	private void setupECSJobs() {
 		String baseDir = "/home/ec2-user/deploymentWorkspace2/modules/OrderManagementModule/";
-		setupECSJob(baseDir, "CreateOrder");
-		setupECSJob(baseDir, "ScheduleOrder");
-		setupECSJob(baseDir, "ShipOrder");
-		setupECSJob(baseDir, "GetData");
+		IRole asgRole = Role.fromRoleArn(this, "ECSASGROLE", System.getenv("ECSASGROLE"));
+		setupECSJob(baseDir, "CreateOrder", asgRole);
+		setupECSJob(baseDir, "ScheduleOrder", asgRole);
+		setupECSJob(baseDir, "ShipOrder", asgRole);
+		setupECSJob(baseDir, "GetData", asgRole);
 	}
 
-	private void setupECSJob(String baseDir, String jobName) {
+	private void setupECSJob(String baseDir, String jobName, IRole asgRole) {
 		// create roles for ecs job
 		Role executionRole = Role.Builder.create(this, jobName + "TskExecRole")
 				.assumedBy(new ServicePrincipal("ecs-tasks.amazonaws.com"))
@@ -428,7 +430,6 @@ public class CdkStack extends Stack {
 		// create log group
 		LogGroup logGroup = LogGroup.Builder.create(this, jobName + "LogGroup").logGroupName("/ecs/" + jobName)
 				.retention(RetentionDays.ONE_DAY).build();
-		IRole asgRole = Role.fromRoleArn(this, "ECSASGROLE", System.getenv("ECSASGROLE"));
 		logGroup.grantWrite(asgRole);
 
 		// define container along with rds secret
