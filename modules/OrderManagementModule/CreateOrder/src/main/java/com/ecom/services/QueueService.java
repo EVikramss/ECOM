@@ -53,6 +53,8 @@ public class QueueService {
 	}
 
 	private void pollMessages() {
+		LOGGER.info("Listening on queue " + queueUrl + " with thread " + Thread.currentThread().getName());
+		
 		while (true) {
 			ReceiveMessageRequest request = ReceiveMessageRequest.builder().queueUrl(queueUrl).waitTimeSeconds(20)
 					.maxNumberOfMessages(10).build();
@@ -98,3 +100,4 @@ public class QueueService {
 		sqsClient.deleteMessage(deleteRequest);
 	}
 }
+
