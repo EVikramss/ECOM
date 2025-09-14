@@ -26,83 +26,86 @@ import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest;
 
 @Service
 public class QueueService {
-	private static final Logger LOGGER = LogManager.getLogger(QueueService.class);
 
-	@Autowired
-	private SqsClient sqsClient;
+  private static final Logger LOGGER = LogManager.getLogger(QueueService.class);
 
-	@Autowired
-	private OrderService orderService;
+  @Autowired
+  private SqsClient sqsClient;
 
-	@Autowired
-	private Validator validator;
+  @Autowired
+  private OrderService orderService;
 
-	@Autowired
-	private OrderDataMapper orderDataMapper;
+  @Autowired
+  private Validator validator;
 
-	@Autowired
-	private ErrorService errorService;
+  @Autowired
+  private OrderDataMapper orderDataMapper;
 
-	@Value("${CreateOrderQURL}")
-	private String queueUrl;
+  @Autowired
+  private ErrorService errorService;
 
-	private final ExecutorService executorService = Executors.newFixedThreadPool(2);
+  @Value("${CreateOrderQURL}")
+  private String queueUrl;
 
-	@PostConstruct
-	public void startPolling() {
-		for (int i = 0; i < 2; i++) {
-			executorService.submit(() -> pollMessages());
-		}
-	}
+  private final ExecutorService executorService = Executors.newFixedThreadPool(2);
 
-	private void pollMessages() {
-		LOGGER.info("Listening on queue " + queueUrl + " with thread " + Thread.currentThread().getName());
-		
-		while (true) {
-			ReceiveMessageRequest request = ReceiveMessageRequest.builder().queueUrl(queueUrl).waitTimeSeconds(20)
-					.maxNumberOfMessages(10).build();
+  @PostConstruct
+  public void startPolling() {
+    for (int i = 0; i < 2; i++) {
+      executorService.submit(() -> pollMessages());
+    }
+  }
 
-			List<Message> messages = sqsClient.receiveMessage(request).messages();
+  private void pollMessages() {
+    LOGGER.info("Listening on queue " + queueUrl + " with thread " + Thread.currentThread().getName());
 
-			for (Message message : messages) {
-				// in case of unhandled exception from processMessage message is not deleted q
-				// let the exception stop the thread, instead of polling same message again and
-				// going into a loop
-				processMessage(message);
-				deleteMessage(message);
-			}
-		}
-	}
+    while (true) {
+      try {
+        ReceiveMessageRequest request = ReceiveMessageRequest.builder().queueUrl(queueUrl).waitTimeSeconds(20)
+            .maxNumberOfMessages(10).build();
 
-	private void processMessage(Message message) {
-		String msgBody = message.body();
-		processQMessage(msgBody);
-	}
+        List<Message> messages = sqsClient.receiveMessage(request).messages();
 
-	public void processQMessage(String msgBody) {
-		ObjectMapper mapper = new ObjectMapper();
-		try {
-			com.ecom.dto.OrderData inputData = mapper.readValue(msgBody, com.ecom.dto.OrderData.class);
-			Set<ConstraintViolation<com.ecom.dto.OrderData>> violations = validator.validate(inputData);
-			if (!violations.isEmpty()) {
-				throw new ConstraintViolationException(violations);
-			}
-			orderService.createOrder(orderDataMapper.convertFromDTO(inputData));
-		} catch (ServiceException e) {
-			e.printStackTrace();
-			errorService.persistData(e);
-		} catch (Exception e) {
-			e.printStackTrace();
-			errorService.persistData(e, msgBody);
-		}
-	}
+        for (Message message : messages) {
+          processMessage(message);
+          deleteMessage(message);
+        }
+      } catch (Exception e) {
+        // in case of unhandled exception from processMessage, message is not deleted
+        // from q. Let the exception stop the thread, instead of polling same message again and
+        // going into a loop
+        e.printStackTrace();
+        throw e;
+      }
+    }
+  }
 
-	private void deleteMessage(Message message) {
-		DeleteMessageRequest deleteRequest = DeleteMessageRequest.builder().queueUrl(queueUrl)
-				.receiptHandle(message.receiptHandle()).build();
-		sqsClient.deleteMessage(deleteRequest);
-	}
+  private void processMessage(Message message) {
+    String msgBody = message.body();
+    processQMessage(msgBody);
+  }
+
+  public void processQMessage(String msgBody) {
+    ObjectMapper mapper = new ObjectMapper();
+    try {
+      com.ecom.dto.OrderData inputData = mapper.readValue(msgBody, com.ecom.dto.OrderData.class);
+      Set<ConstraintViolation<com.ecom.dto.OrderData>> violations = validator.validate(inputData);
+      if (!violations.isEmpty()) {
+        throw new ConstraintViolationException(violations);
+      }
+      orderService.createOrder(orderDataMapper.convertFromDTO(inputData));
+    } catch (ServiceException e) {
+      e.printStackTrace();
+      errorService.persistData(e);
+    } catch (Exception e) {
+      e.printStackTrace();
+      errorService.persistData(e, msgBody);
+    }
+  }
+
+  private void deleteMessage(Message message) {
+    DeleteMessageRequest deleteRequest = DeleteMessageRequest.builder().queueUrl(queueUrl)
+        .receiptHandle(message.receiptHandle()).build();
+    sqsClient.deleteMessage(deleteRequest);
+  }
 }
-
-
-
