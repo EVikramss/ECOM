@@ -450,6 +450,11 @@ public class CdkStack extends Stack {
 		LogGroup logGroup = LogGroup.Builder.create(this, jobName + "LogGroup").logGroupName("/ecs/" + jobName)
 				.retention(RetentionDays.ONE_DAY).build();
 		logGroup.grantWrite(asgRole);
+		
+		Map<String, String> envVariables = Map.of("DBPRX_EP", dbProxy.getEndpoint(), "INVAVLURL", System.getenv("INVAVLURL"));
+		if("CreateOrder".equals(jobName)) {
+			envVariables.put("CreateOrderQURL", createOrderQ.getQueueUrl());
+		}
 
 		// define container along with rds secret
 		String imageURI = System.getenv("ECRREPO") + ":" + jobName.toLowerCase();
@@ -460,7 +465,7 @@ public class CdkStack extends Stack {
 				.portMappings(List.of(PortMapping.builder().containerPort(8080).build()))
 				.logging(LogDriver.awsLogs(AwsLogDriverProps.builder().logGroup(logGroup).streamPrefix("ecom").build()))
 				.secrets(Map.of("SECRET", Secret.fromSecretsManager(dbSecret)))
-				.environment(Map.of("DBPRX_EP", dbProxy.getEndpoint(), "INVAVLURL", System.getenv("INVAVLURL")))
+				.environment(envVariables)
 				.build());
 
 		// create service for task - use same sg as asg
