@@ -68,6 +68,7 @@ import software.amazon.awscdk.services.ecs.PortMapping;
 import software.amazon.awscdk.services.ecs.Secret;
 import software.amazon.awscdk.services.iam.AnyPrincipal;
 import software.amazon.awscdk.services.iam.Effect;
+import software.amazon.awscdk.services.iam.IManagedPolicy;
 import software.amazon.awscdk.services.iam.IRole;
 import software.amazon.awscdk.services.iam.ManagedPolicy;
 import software.amazon.awscdk.services.iam.PolicyStatement;
@@ -434,11 +435,19 @@ public class CdkStack extends Stack {
 						List.of(ManagedPolicy.fromAwsManagedPolicyName("service-role/AmazonECSTaskExecutionRolePolicy"),
 								ManagedPolicy.fromAwsManagedPolicyName("SecretsManagerReadWrite")))
 				.build();
-
+		
+		List<IManagedPolicy> taskPolicies = null;
+		if ("CreateOrder".equals(jobName)) {
+			taskPolicies = List.of(ManagedPolicy.fromAwsManagedPolicyName("SecretsManagerReadWrite"),
+					ManagedPolicy.fromAwsManagedPolicyName("AmazonRDSDataFullAccess"),
+					ManagedPolicy.fromAwsManagedPolicyName("AmazonSQSFullAccess"));
+		} else {
+			taskPolicies = List.of(ManagedPolicy.fromAwsManagedPolicyName("SecretsManagerReadWrite"),
+					ManagedPolicy.fromAwsManagedPolicyName("AmazonRDSDataFullAccess"));
+		}
 		Role taskRole = Role.Builder.create(this, jobName + "TskRole")
 				.assumedBy(new ServicePrincipal("ecs-tasks.amazonaws.com"))
-				.managedPolicies(List.of(ManagedPolicy.fromAwsManagedPolicyName("SecretsManagerReadWrite"),
-						ManagedPolicy.fromAwsManagedPolicyName("AmazonRDSDataFullAccess")))
+				.managedPolicies(taskPolicies)
 				.build();
 
 		// create task definition along with log group
@@ -473,9 +482,8 @@ public class CdkStack extends Stack {
 				.serviceName(jobName + "Service").securityGroups(List.of(asgsg))
 				.vpcSubnets(SubnetSelection.builder().subnetType(SubnetType.PRIVATE_ISOLATED).build())
 				.taskDefinition(taskDefinition).desiredCount(1).build();
-
-		// start service after db proxy is provisioned
-		service.getNode().addDependency(dbProxy);
+		
+        service.getNode().addDependency(dbProxy);
 	}
 
 	private void lookupNetwork() {
