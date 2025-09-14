@@ -120,7 +120,7 @@ public class CdkStack extends Stack {
 	private UserPoolDomain userPoolDomain;
 	private UserPoolClient userPoolClient;
 	private UserPool userPool;
-	
+
 	private Queue createOrderQ;
 
 	private CfnApp amplifyApp;
@@ -151,9 +151,8 @@ public class CdkStack extends Stack {
 	}
 
 	private void setupSQS() {
-		createOrderQ = Queue.Builder.create(this, "CreateOrderQ")
-		.queueName("CreateOrderQ").retentionPeriod(Duration.days(1))
-				.build();
+		createOrderQ = Queue.Builder.create(this, "CreateOrderQ").queueName("CreateOrderQ")
+				.retentionPeriod(Duration.days(1)).build();
 	}
 
 	private void setupOrderConsole(String baseDir) {
@@ -413,7 +412,7 @@ public class CdkStack extends Stack {
 
 		// grant consume msg from q
 		createOrderQ.grantConsumeMessages(asgRole);
-		
+
 		// add asg role to db proxy sg
 		dbprxysg.addIngressRule(asgsg, Port.POSTGRES);
 		smepsg.addIngressRule(asgsg, Port.HTTPS);
@@ -450,13 +449,14 @@ public class CdkStack extends Stack {
 		LogGroup logGroup = LogGroup.Builder.create(this, jobName + "LogGroup").logGroupName("/ecs/" + jobName)
 				.retention(RetentionDays.ONE_DAY).build();
 		logGroup.grantWrite(asgRole);
-		
-		Map<String, String> envVariables;     
-      if ("CreateOrder".equals(jobName)) {     
-           envVariables = Map.of("DBPRX_EP", dbProxy.getEndpoint(), "INVAVLURL", System.getenv("INVAVLURL"),           "CreateOrderQURL", createOrderQ.getQueueUrl());     
-      } else {       
-            envVariables = Map.of("DBPRX_EP", dbProxy.getEndpoint(), "INVAVLURL", System.getenv("INVAVLURL"));     
-      }  
+
+		Map<String, String> envVariables;
+		if ("CreateOrder".equals(jobName)) {
+			envVariables = Map.of("DBPRX_EP", dbProxy.getEndpoint(), "INVAVLURL", System.getenv("INVAVLURL"),
+					"CreateOrderQURL", createOrderQ.getQueueUrl());
+		} else {
+			envVariables = Map.of("DBPRX_EP", dbProxy.getEndpoint(), "INVAVLURL", System.getenv("INVAVLURL"));
+		}
 
 		// define container along with rds secret
 		String imageURI = System.getenv("ECRREPO") + ":" + jobName.toLowerCase();
@@ -466,9 +466,7 @@ public class CdkStack extends Stack {
 				.cpu(Integer.parseInt(System.getenv(jobName + "CPU")))
 				.portMappings(List.of(PortMapping.builder().containerPort(8080).build()))
 				.logging(LogDriver.awsLogs(AwsLogDriverProps.builder().logGroup(logGroup).streamPrefix("ecom").build()))
-				.secrets(Map.of("SECRET", Secret.fromSecretsManager(dbSecret)))
-				.environment(envVariables)
-				.build());
+				.secrets(Map.of("SECRET", Secret.fromSecretsManager(dbSecret))).environment(envVariables).build());
 
 		// create service for task - use same sg as asg
 		Ec2Service service = Ec2Service.Builder.create(this, jobName + "Service").cluster(cluster)
