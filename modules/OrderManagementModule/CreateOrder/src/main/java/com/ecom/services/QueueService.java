@@ -26,6 +26,7 @@ import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest;
 
 @Service
 public class QueueService {
+	private static final Logger LOGGER = LogManager.getLogger(QueueService.class);
 
 	@Autowired
 	private SqsClient sqsClient;
@@ -102,5 +103,6 @@ public class QueueService {
 		sqsClient.deleteMessage(deleteRequest);
 	}
 }
+
 
 
