@@ -451,10 +451,12 @@ public class CdkStack extends Stack {
 				.retention(RetentionDays.ONE_DAY).build();
 		logGroup.grantWrite(asgRole);
 		
-		Map<String, String> envVariables = Map.of("DBPRX_EP", dbProxy.getEndpoint(), "INVAVLURL", System.getenv("INVAVLURL"));
-		if("CreateOrder".equals(jobName)) {
-			envVariables.put("CreateOrderQURL", createOrderQ.getQueueUrl());
-		}
+		Map<String, String> envVariables;     
+      if ("CreateOrder".equals(jobName)) {     
+           envVariables = Map.of("DBPRX_EP", dbProxy.getEndpoint(), "INVAVLURL", System.getenv("INVAVLURL"),           "CreateOrderQURL", createOrderQ.getQueueUrl());     
+      } else {       
+            envVariables = Map.of("DBPRX_EP", dbProxy.getEndpoint(), "INVAVLURL", System.getenv("INVAVLURL"));     
+      }  
 
 		// define container along with rds secret
 		String imageURI = System.getenv("ECRREPO") + ":" + jobName.toLowerCase();
