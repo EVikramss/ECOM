@@ -473,7 +473,9 @@ public class CdkStack extends Stack {
 				.serviceName(jobName + "Service").securityGroups(List.of(asgsg))
 				.vpcSubnets(SubnetSelection.builder().subnetType(SubnetType.PRIVATE_ISOLATED).build())
 				.taskDefinition(taskDefinition).desiredCount(1).build();
-                  service.getNode().addDependency(dbProxy);
+
+		// start service after db proxy is provisioned
+		service.getNode().addDependency(dbProxy);
 	}
 
 	private void lookupNetwork() {
