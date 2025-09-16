@@ -417,7 +417,7 @@ public class CdkStack extends Stack {
 		ICluster cluster = Cluster.fromClusterAttributes(this, "ECOMECSCluster",
 				ClusterAttributes.builder().clusterName(System.getenv("ECSARN")).vpc(vpc).build());
 		IPrivateDnsNamespace pdn = PrivateDnsNamespace.fromPrivateDnsNamespaceAttributes(this, "EcomNamespace",
-				PrivateDnsNamespaceAttributes.builder().namespaceArn(System.getenv("ECSNMSPARN")).build());
+				PrivateDnsNamespaceAttributes.builder().namespaceArn(System.getenv("ECSNMSPARN")).namespaceId(System.getenv("ECSNMSPID")).namespaceName("ecom.internal").build());
 
 		// grant consume msg from q
 		createOrderQ.grantConsumeMessages(asgRole);

@@ -242,5 +242,6 @@ public class CdkStack extends Stack {
 		CfnOutput.Builder.create(this, "ECSASGROLE").value(asg.getRole().getRoleArn()).build();
 		CfnOutput.Builder.create(this, "ECSASGSG").value(asgsg.getSecurityGroupId()).build();
 		CfnOutput.Builder.create(this, "ECSNMSPARN").value(namespace.getNamespaceArn()).build();
+      CfnOutput.Builder.create(this, "ECSNMSPID").value(namespace.getNamespaceId()).build();
 	}
 }
