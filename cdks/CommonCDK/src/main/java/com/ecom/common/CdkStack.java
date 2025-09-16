@@ -42,6 +42,7 @@ import software.amazon.awscdk.services.s3.Bucket;
 import software.amazon.awscdk.services.s3.BucketPolicy;
 import software.amazon.awscdk.services.s3.BucketPolicyProps;
 import software.amazon.awscdk.services.s3.BucketProps;
+import software.amazon.awscdk.services.servicediscovery.PrivateDnsNamespace;
 import software.constructs.Construct;
 
 public class CdkStack extends Stack {
@@ -53,16 +54,17 @@ public class CdkStack extends Stack {
 	private ISecurityGroup smepsg;
 	private ISecurityGroup ecsepsg;
 	private ISecurityGroup asgsg;
-	
+
 	private Bucket ecomBucket;
-	
+
 	private Function runDDLFunc;
 	private ISecurityGroup runDDLFuncSG;
-	
+
 	private Cluster cluster;
 	private Role ecsInstanceRole;
 	private Repository ecrrepo;
 	private AutoScalingGroup asg;
+	private PrivateDnsNamespace namespace;
 
 	public CdkStack(final Construct scope, final String id, final StackProps props, Properties additionalProperties) {
 		super(scope, id, props);
@@ -109,6 +111,10 @@ public class CdkStack extends Stack {
 		// set default capacity provider
 		cluster.addDefaultCapacityProviderStrategy(List.of(CapacityProviderStrategy.builder()
 				.capacityProvider(capacityProvider.getCapacityProviderName()).weight(1).build()));
+		
+		// setup cluster namespace
+		namespace = PrivateDnsNamespace.Builder.create(this, "EcomNamespace")
+				.name("ecom.internal").vpc(vpc).build();
 
 		// create ECR to hold docker images & grant access to it
 		ecrrepo = Repository.Builder.create(this, "ecomrepo").repositoryName("ecomrepo").build();
@@ -235,5 +241,6 @@ public class CdkStack extends Stack {
 		CfnOutput.Builder.create(this, "ECREPSGID").value(ecsepsg.getSecurityGroupId()).build();
 		CfnOutput.Builder.create(this, "ECSASGROLE").value(asg.getRole().getRoleArn()).build();
 		CfnOutput.Builder.create(this, "ECSASGSG").value(asgsg.getSecurityGroupId()).build();
+		CfnOutput.Builder.create(this, "ECSNMSPARN").value(namespace.getNamespaceArn()).build();
 	}
 }

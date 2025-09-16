@@ -54,6 +54,7 @@ import software.amazon.awscdk.services.ec2.SubnetType;
 import software.amazon.awscdk.services.ec2.Vpc;
 import software.amazon.awscdk.services.ec2.VpcLookupOptions;
 import software.amazon.awscdk.services.ecs.AwsLogDriverProps;
+import software.amazon.awscdk.services.ecs.CloudMapOptions;
 import software.amazon.awscdk.services.ecs.Cluster;
 import software.amazon.awscdk.services.ecs.ClusterAttributes;
 import software.amazon.awscdk.services.ecs.ContainerDefinition;
@@ -99,6 +100,10 @@ import software.amazon.awscdk.services.rds.ProvisionedClusterInstanceProps;
 import software.amazon.awscdk.services.s3.Bucket;
 import software.amazon.awscdk.services.s3.IBucket;
 import software.amazon.awscdk.services.secretsmanager.ISecret;
+import software.amazon.awscdk.services.servicediscovery.DnsRecordType;
+import software.amazon.awscdk.services.servicediscovery.IPrivateDnsNamespace;
+import software.amazon.awscdk.services.servicediscovery.PrivateDnsNamespace;
+import software.amazon.awscdk.services.servicediscovery.PrivateDnsNamespaceAttributes;
 import software.amazon.awscdk.services.sqs.Queue;
 import software.constructs.Construct;
 
@@ -406,10 +411,13 @@ public class CdkStack extends Stack {
 	}
 
 	private void setupECSJobs() {
+		// lookup needed resources
 		IRole asgRole = Role.fromRoleArn(this, "ECSASGROLE", System.getenv("ECSASGROLE"));
 		ISecurityGroup asgsg = SecurityGroup.fromLookupById(this, "ECSASGSG", System.getenv("ECSASGSG"));
 		ICluster cluster = Cluster.fromClusterAttributes(this, "ECOMECSCluster",
 				ClusterAttributes.builder().clusterName(System.getenv("ECSARN")).vpc(vpc).build());
+		IPrivateDnsNamespace pdn = PrivateDnsNamespace.fromPrivateDnsNamespaceAttributes(this, "EcomNamespace",
+				PrivateDnsNamespaceAttributes.builder().namespaceArn(System.getenv("ECSNMSPARN")).build());
 
 		// grant consume msg from q
 		createOrderQ.grantConsumeMessages(asgRole);
@@ -421,13 +429,14 @@ public class CdkStack extends Stack {
 		asgsg.addEgressRule(smepsg, Port.HTTPS);
 
 		String baseDir = "/home/ec2-user/deploymentWorkspace2/modules/OrderManagementModule/";
-		setupECSJob(baseDir, "CreateOrder", asgRole, asgsg, cluster);
-		setupECSJob(baseDir, "ScheduleOrder", asgRole, asgsg, cluster);
-		setupECSJob(baseDir, "ShipOrder", asgRole, asgsg, cluster);
-		setupECSJob(baseDir, "GetData", asgRole, asgsg, cluster);
+		setupECSJob(baseDir, "CreateOrder", asgRole, asgsg, cluster, pdn);
+		setupECSJob(baseDir, "ScheduleOrder", asgRole, asgsg, cluster, pdn);
+		setupECSJob(baseDir, "ShipOrder", asgRole, asgsg, cluster, pdn);
+		setupECSJob(baseDir, "GetData", asgRole, asgsg, cluster, pdn);
 	}
 
-	private void setupECSJob(String baseDir, String jobName, IRole asgRole, ISecurityGroup asgsg, ICluster cluster) {
+	private void setupECSJob(String baseDir, String jobName, IRole asgRole, ISecurityGroup asgsg, ICluster cluster,
+			IPrivateDnsNamespace pdn) {
 		// create roles for ecs job
 		Role executionRole = Role.Builder.create(this, jobName + "TskExecRole")
 				.assumedBy(new ServicePrincipal("ecs-tasks.amazonaws.com"))
@@ -435,7 +444,7 @@ public class CdkStack extends Stack {
 						List.of(ManagedPolicy.fromAwsManagedPolicyName("service-role/AmazonECSTaskExecutionRolePolicy"),
 								ManagedPolicy.fromAwsManagedPolicyName("SecretsManagerReadWrite")))
 				.build();
-		
+
 		List<IManagedPolicy> taskPolicies = null;
 		if ("CreateOrder".equals(jobName)) {
 			taskPolicies = List.of(ManagedPolicy.fromAwsManagedPolicyName("SecretsManagerReadWrite"),
@@ -446,9 +455,7 @@ public class CdkStack extends Stack {
 					ManagedPolicy.fromAwsManagedPolicyName("AmazonRDSDataFullAccess"));
 		}
 		Role taskRole = Role.Builder.create(this, jobName + "TskRole")
-				.assumedBy(new ServicePrincipal("ecs-tasks.amazonaws.com"))
-				.managedPolicies(taskPolicies)
-				.build();
+				.assumedBy(new ServicePrincipal("ecs-tasks.amazonaws.com")).managedPolicies(taskPolicies).build();
 
 		// create task definition along with log group
 		Ec2TaskDefinition taskDefinition = Ec2TaskDefinition.Builder.create(this, jobName + "TskDef")
@@ -478,12 +485,15 @@ public class CdkStack extends Stack {
 				.secrets(Map.of("SECRET", Secret.fromSecretsManager(dbSecret))).environment(envVariables).build());
 
 		// create service for task - use same sg as asg
+		// expose service with cloud map and dns A records
 		Ec2Service service = Ec2Service.Builder.create(this, jobName + "Service").cluster(cluster)
 				.serviceName(jobName + "Service").securityGroups(List.of(asgsg))
+				.cloudMapOptions(CloudMapOptions.builder().cloudMapNamespace(pdn).name(jobName.toLowerCase())
+						.dnsRecordType(DnsRecordType.A).build())
 				.vpcSubnets(SubnetSelection.builder().subnetType(SubnetType.PRIVATE_ISOLATED).build())
 				.taskDefinition(taskDefinition).desiredCount(1).build();
-		
-        service.getNode().addDependency(dbProxy);
+
+		service.getNode().addDependency(dbProxy);
 	}
 
 	private void lookupNetwork() {
