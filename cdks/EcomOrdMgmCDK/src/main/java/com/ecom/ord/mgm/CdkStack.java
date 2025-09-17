@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
+import org.jetbrains.annotations.NotNull;
+
 import software.amazon.awscdk.CfnOutput;
 import software.amazon.awscdk.Duration;
 import software.amazon.awscdk.Stack;
@@ -28,9 +30,12 @@ import software.amazon.awscdk.services.appsync.GraphqlApi;
 import software.amazon.awscdk.services.appsync.LambdaDataSource;
 import software.amazon.awscdk.services.appsync.UserPoolConfig;
 import software.amazon.awscdk.services.appsync.UserPoolDefaultAction;
+import software.amazon.awscdk.services.certificatemanager.Certificate;
+import software.amazon.awscdk.services.certificatemanager.ICertificate;
 import software.amazon.awscdk.services.cognito.AuthFlow;
 import software.amazon.awscdk.services.cognito.CfnUserPoolClient;
 import software.amazon.awscdk.services.cognito.CognitoDomainOptions;
+import software.amazon.awscdk.services.cognito.IUserPool;
 import software.amazon.awscdk.services.cognito.OAuthFlows;
 import software.amazon.awscdk.services.cognito.OAuthScope;
 import software.amazon.awscdk.services.cognito.OAuthSettings;
@@ -67,6 +72,20 @@ import software.amazon.awscdk.services.ecs.LogDriver;
 import software.amazon.awscdk.services.ecs.NetworkMode;
 import software.amazon.awscdk.services.ecs.PortMapping;
 import software.amazon.awscdk.services.ecs.Secret;
+import software.amazon.awscdk.services.elasticloadbalancingv2.ApplicationListener;
+import software.amazon.awscdk.services.elasticloadbalancingv2.ApplicationLoadBalancer;
+import software.amazon.awscdk.services.elasticloadbalancingv2.ApplicationLoadBalancerAttributes;
+import software.amazon.awscdk.services.elasticloadbalancingv2.ApplicationProtocol;
+import software.amazon.awscdk.services.elasticloadbalancingv2.ApplicationTargetGroup;
+import software.amazon.awscdk.services.elasticloadbalancingv2.BaseApplicationListenerProps;
+import software.amazon.awscdk.services.elasticloadbalancingv2.HealthCheck;
+import software.amazon.awscdk.services.elasticloadbalancingv2.IApplicationLoadBalancer;
+import software.amazon.awscdk.services.elasticloadbalancingv2.ListenerAction;
+import software.amazon.awscdk.services.elasticloadbalancingv2.ListenerCertificate;
+import software.amazon.awscdk.services.elasticloadbalancingv2.TargetType;
+import software.amazon.awscdk.services.elasticloadbalancingv2.actions.AuthenticateCognitoAction;
+import software.amazon.awscdk.services.elasticloadbalancingv2.targets.InstanceTarget;
+import software.amazon.awscdk.services.elasticloadbalancingv2.targets.IpTarget;
 import software.amazon.awscdk.services.iam.AnyPrincipal;
 import software.amazon.awscdk.services.iam.Effect;
 import software.amazon.awscdk.services.iam.IManagedPolicy;
@@ -118,19 +137,22 @@ public class CdkStack extends Stack {
 	private DatabaseProxy dbProxy;
 	private DatabaseCluster dbCluster;
 
-	ISecret dbSecret;
-	ISecurityGroup dbprxysg;
-	ISecurityGroup smepsg;
-	Role amplifyRole;
+	private ISecret dbSecret;
+	private ISecurityGroup dbprxysg;
+	private ISecurityGroup smepsg;
+	private Role amplifyRole;
+	private ISecurityGroup asgsg;
 
 	private UserPoolDomain userPoolDomain;
 	private UserPoolClient userPoolClient;
-	private UserPool userPool;
+	private IUserPool userPool;
 
 	private Queue createOrderQ;
 
 	private CfnApp amplifyApp;
 	private GraphqlApi appSyncAPI;
+
+	private Ec2Service getDataService;
 
 	public CdkStack(final Construct scope, final String id, final StackProps props, Properties additionalProperties) {
 		super(scope, id, props);
@@ -151,6 +173,7 @@ public class CdkStack extends Stack {
 		setupOrderConsole(baseDir);
 		setupSQS();
 		setupECSJobs();
+		configureALB();
 
 		// record output variables
 		setupOutputVariables();
@@ -413,11 +436,12 @@ public class CdkStack extends Stack {
 	private void setupECSJobs() {
 		// lookup needed resources
 		IRole asgRole = Role.fromRoleArn(this, "ECSASGROLE", System.getenv("ECSASGROLE"));
-		ISecurityGroup asgsg = SecurityGroup.fromLookupById(this, "ECSASGSG", System.getenv("ECSASGSG"));
+		asgsg = SecurityGroup.fromLookupById(this, "ECSASGSG", System.getenv("ECSASGSG"));
 		ICluster cluster = Cluster.fromClusterAttributes(this, "ECOMECSCluster",
 				ClusterAttributes.builder().clusterName(System.getenv("ECSARN")).vpc(vpc).build());
 		IPrivateDnsNamespace pdn = PrivateDnsNamespace.fromPrivateDnsNamespaceAttributes(this, "EcomNamespace",
-				PrivateDnsNamespaceAttributes.builder().namespaceArn(System.getenv("ECSNMSPARN")).namespaceId(System.getenv("ECSNMSPID")).namespaceName("ecom.internal").build());
+				PrivateDnsNamespaceAttributes.builder().namespaceArn(System.getenv("ECSNMSPARN"))
+						.namespaceId(System.getenv("ECSNMSPID")).namespaceName("ecom.internal").build());
 
 		// grant consume msg from q
 		createOrderQ.grantConsumeMessages(asgRole);
@@ -432,11 +456,11 @@ public class CdkStack extends Stack {
 		setupECSJob(baseDir, "CreateOrder", asgRole, asgsg, cluster, pdn);
 		setupECSJob(baseDir, "ScheduleOrder", asgRole, asgsg, cluster, pdn);
 		setupECSJob(baseDir, "ShipOrder", asgRole, asgsg, cluster, pdn);
-		setupECSJob(baseDir, "GetData", asgRole, asgsg, cluster, pdn);
+		getDataService = setupECSJob(baseDir, "GetData", asgRole, asgsg, cluster, pdn);
 	}
 
-	private void setupECSJob(String baseDir, String jobName, IRole asgRole, ISecurityGroup asgsg, ICluster cluster,
-			IPrivateDnsNamespace pdn) {
+	private Ec2Service setupECSJob(String baseDir, String jobName, IRole asgRole, ISecurityGroup asgsg,
+			ICluster cluster, IPrivateDnsNamespace pdn) {
 		// create roles for ecs job
 		Role executionRole = Role.Builder.create(this, jobName + "TskExecRole")
 				.assumedBy(new ServicePrincipal("ecs-tasks.amazonaws.com"))
@@ -486,7 +510,7 @@ public class CdkStack extends Stack {
 
 		// create service for task - use same sg as asg
 		// expose service with cloud map and dns A records
-      // set count as 0 and start service after initDB
+		// set count as 0 and start service after initDB
 		Ec2Service service = Ec2Service.Builder.create(this, jobName + "Service").cluster(cluster)
 				.serviceName(jobName + "Service").securityGroups(List.of(asgsg))
 				.cloudMapOptions(CloudMapOptions.builder().cloudMapNamespace(pdn).name(jobName.toLowerCase())
@@ -495,6 +519,42 @@ public class CdkStack extends Stack {
 				.taskDefinition(taskDefinition).desiredCount(0).build();
 
 		service.getNode().addDependency(dbProxy);
+
+		return service;
+	}
+
+	private void configureALB() {
+		String userVPCIDStr = System.getenv("USERVPCID");
+		String albARNStr = System.getenv("ALBARN");
+		String albSGStr = System.getenv("ALBSG");
+		String albCertARNStr = System.getenv("ALBCERTARN");
+
+		IVpc userVPC = Vpc.fromLookup(this, userVPCIDStr, VpcLookupOptions.builder().vpcId(userVPCIDStr).build());
+		ISecurityGroup albSG = SecurityGroup.fromLookupById(this, albSGStr, albSGStr);
+
+		// add alb sg to task/service sg
+		asgsg.addIngressRule(albSG, Port.tcp(8080), "Allow ALB access to ecs services on port 8080");
+		albSG.addEgressRule(asgsg, Port.tcp(8080));
+
+		// get existing ALB from user vpc
+		IApplicationLoadBalancer alb = ApplicationLoadBalancer.fromApplicationLoadBalancerAttributes(this, stackName,
+				ApplicationLoadBalancerAttributes.builder().loadBalancerArn(albARNStr).vpc(userVPC)
+						.securityGroupId(albSGStr).build());
+
+		// point to getDataService
+		ApplicationTargetGroup targetGroup = ApplicationTargetGroup.Builder.create(this, "ALBTargetGroup").vpc(vpc)
+				.port(8080).protocol(ApplicationProtocol.HTTP).targetType(TargetType.IP)
+				.targets(List.of(getDataService)).healthCheck(HealthCheck.builder().enabled(false).build()).build();
+
+		ICertificate existingCertificate = Certificate.fromCertificateArn(this, "CERT_ARN", albCertARNStr);
+		alb.addListener("HttpsListener",
+				BaseApplicationListenerProps.builder().port(444).protocol(ApplicationProtocol.HTTPS)
+						.certificates(List.of(ListenerCertificate.fromCertificateManager(existingCertificate)))
+						.defaultAction(AuthenticateCognitoAction.Builder.create().userPool(userPool)
+								.userPoolClient(userPoolClient).userPoolDomain(userPoolDomain)
+								.next(ListenerAction.forward(List.of(targetGroup))).build())
+						.build());
+
 	}
 
 	private void lookupNetwork() {

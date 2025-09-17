@@ -22,11 +22,15 @@ import software.amazon.awscdk.services.cognito.SignInAliases;
 import software.amazon.awscdk.services.cognito.UserPool;
 import software.amazon.awscdk.services.cognito.UserPoolClient;
 import software.amazon.awscdk.services.cognito.UserPoolDomain;
+import software.amazon.awscdk.services.ec2.AclCidr;
+import software.amazon.awscdk.services.ec2.AclTraffic;
+import software.amazon.awscdk.services.ec2.Action;
 import software.amazon.awscdk.services.ec2.BlockDevice;
 import software.amazon.awscdk.services.ec2.BlockDeviceVolume;
 import software.amazon.awscdk.services.ec2.CfnEIP;
 import software.amazon.awscdk.services.ec2.CfnNatGateway;
 import software.amazon.awscdk.services.ec2.CfnRoute;
+import software.amazon.awscdk.services.ec2.CommonNetworkAclEntryOptions;
 import software.amazon.awscdk.services.ec2.EbsDeviceOptions;
 import software.amazon.awscdk.services.ec2.EbsDeviceVolumeType;
 import software.amazon.awscdk.services.ec2.ISubnet;
@@ -35,13 +39,16 @@ import software.amazon.awscdk.services.ec2.InstanceClass;
 import software.amazon.awscdk.services.ec2.InstanceProps;
 import software.amazon.awscdk.services.ec2.InstanceSize;
 import software.amazon.awscdk.services.ec2.InstanceType;
+import software.amazon.awscdk.services.ec2.IpAddresses;
 import software.amazon.awscdk.services.ec2.MachineImage;
+import software.amazon.awscdk.services.ec2.NetworkAcl;
 import software.amazon.awscdk.services.ec2.Port;
 import software.amazon.awscdk.services.ec2.SecurityGroup;
 import software.amazon.awscdk.services.ec2.SecurityGroupProps;
 import software.amazon.awscdk.services.ec2.SubnetConfiguration;
 import software.amazon.awscdk.services.ec2.SubnetSelection;
 import software.amazon.awscdk.services.ec2.SubnetType;
+import software.amazon.awscdk.services.ec2.TrafficDirection;
 import software.amazon.awscdk.services.ec2.UserData;
 import software.amazon.awscdk.services.ec2.Vpc;
 import software.amazon.awscdk.services.elasticloadbalancingv2.ApplicationLoadBalancer;
@@ -60,6 +67,7 @@ import software.constructs.Construct;
 
 public class BuildBoxCdkStack extends Stack {
 
+	private static final String buildBoxCIDR = "10.1.0.0/16";
 	private Stack stack;
 	private String stackName;
 
@@ -100,7 +108,7 @@ public class BuildBoxCdkStack extends Stack {
 	 * Setup listener to use cognito user pools for authentication
 	 */
 	private void configureALB() {
-		ApplicationTargetGroup targetGroup = ApplicationTargetGroup.Builder.create(this, "MyTargetGroup").vpc(vpc)
+		ApplicationTargetGroup targetGroup = ApplicationTargetGroup.Builder.create(this, "ALBTargetGroup").vpc(vpc)
 				.port(8080).protocol(ApplicationProtocol.HTTP).targets(List.of(new InstanceTarget(buildInstance)))
 				.build();
 
@@ -117,8 +125,8 @@ public class BuildBoxCdkStack extends Stack {
 
 	private void setupCognito() {
 		// create cognito user pool
-		userPool = UserPool.Builder.create(this, "BuildBoxUserPool").selfSignUpEnabled(false)
-				.signInAliases(SignInAliases.builder().username(true).build()).build();
+		userPool = UserPool.Builder.create(this, "InternalUserPool").selfSignUpEnabled(false)
+				.userPoolName("InternalUserPool").signInAliases(SignInAliases.builder().username(true).build()).build();
 
 		// create cognito domain
 		userPoolDomain = UserPoolDomain.Builder.create(this, "BuildBoxPoolDomain").userPool(userPool)
@@ -126,8 +134,7 @@ public class BuildBoxCdkStack extends Stack {
 
 		// create cognito client
 		userPoolClient = UserPoolClient.Builder.create(this, "BuildBoxClient").userPool(userPool).generateSecret(true)
-				.authFlows(AuthFlow.builder().userPassword(true).build())
-				.accessTokenValidity(Duration.hours(1))
+				.authFlows(AuthFlow.builder().userPassword(true).build()).accessTokenValidity(Duration.hours(1))
 				.oAuth(OAuthSettings.builder().flows(OAuthFlows.builder().authorizationCodeGrant(true).build())
 						.scopes(List.of(OAuthScope.EMAIL))
 						.callbackUrls(
@@ -142,7 +149,7 @@ public class BuildBoxCdkStack extends Stack {
 
 	private void createALB() {
 		// create application load balancer
-		alb = ApplicationLoadBalancer.Builder.create(this, "MyALB").vpc(vpc).securityGroup(albSecurityGroup)
+		alb = ApplicationLoadBalancer.Builder.create(this, "ECOMALB").vpc(vpc).securityGroup(albSecurityGroup)
 				.internetFacing(true).build();
 	}
 
@@ -254,8 +261,23 @@ public class BuildBoxCdkStack extends Stack {
 				SubnetConfiguration.builder().cidrMask(24).name("PublicSubnet").subnetType(SubnetType.PUBLIC).build(),
 				SubnetConfiguration.builder().cidrMask(24).name("PrivateSubnet").subnetType(SubnetType.PRIVATE_ISOLATED)
 						.build()))
-				.maxAzs(99) // Use all AZ's
+				.ipAddresses(IpAddresses.cidr(buildBoxCIDR)).maxAzs(99) // Use all AZ's
 				.natGateways(0).build();
+
+		// set NACL
+		NetworkAcl buildboxVPCNACL = NetworkAcl.Builder.create(this, "BuildBoxVPCNACL").vpc(vpc)
+				.subnetSelection(SubnetSelection.builder().subnetType(SubnetType.PRIVATE_ISOLATED).build()).build();
+
+		// allow all out traffic
+		buildboxVPCNACL.addEntry("Allow from Build Box VPC",
+				CommonNetworkAclEntryOptions.builder().cidr(AclCidr.ipv4("0.0.0.0/0")).ruleNumber(200)
+						.traffic(AclTraffic.tcpPortRange(443, 444)).direction(TrafficDirection.INGRESS)
+						.ruleAction(Action.ALLOW).build());
+
+		buildboxVPCNACL.addEntry("Allow to Build Box VPC",
+				CommonNetworkAclEntryOptions.builder().cidr(AclCidr.ipv4("0.0.0.0/0")).ruleNumber(300)
+						.traffic(AclTraffic.allTraffic()).direction(TrafficDirection.EGRESS).ruleAction(Action.ALLOW)
+						.build());
 
 		// get list of private and public subnets
 		List<ISubnet> publicSubnets = vpc.getPublicSubnets();
@@ -296,14 +318,20 @@ public class BuildBoxCdkStack extends Stack {
 	 */
 	private void setupOutputVariables() {
 		CfnOutput.Builder.create(this, "ALBURL").value("https://" + alb.getLoadBalancerDnsName()).build();
-		CfnOutput.Builder.create(this, "JENKINS_USER_POOL_ID").value(userPool.getUserPoolId()).build();
-		CfnOutput.Builder.create(this, "JENKINS_CLIENT_ID").value(userPoolClient.getUserPoolClientId()).build();
+		CfnOutput.Builder.create(this, "ALBARN").value(alb.getLoadBalancerArn()).build();
+		CfnOutput.Builder.create(this, "ALBSG").value(albSecurityGroup.getSecurityGroupId()).build();
+		CfnOutput.Builder.create(this, "INTERNALUSERPOOLID").value(userPool.getUserPoolId()).build();
+		CfnOutput.Builder.create(this, "JENKINSCLIENTID").value(userPoolClient.getUserPoolClientId()).build();
+		CfnOutput.Builder.create(this, "BUILDBOXVPCID").value(vpc.getVpcId()).build();
+		CfnOutput.Builder.create(this, "BUILDBOXVPCSG").value(vpc.getVpcDefaultSecurityGroup()).build();
+		CfnOutput.Builder.create(this, "BUILDBOXVPCNACL").value(vpc.getVpcDefaultNetworkAcl()).build();
+		CfnOutput.Builder.create(this, "ALBCERTARN").value(System.getenv("CERT_ARN")).build();
 	}
 
 	private void setEC2CommandList(List<String> commandList) {
 
 		// download artifacts & setup folders
-        commandList.add("sudo yum install -y git");
+		commandList.add("sudo yum install -y git");
 		commandList.add("cd /home/ec2-user");
 		commandList.add("git clone https://github.com/EVikramss/ECOM.git");
 		commandList.add("chmod -R 777 ECOM");

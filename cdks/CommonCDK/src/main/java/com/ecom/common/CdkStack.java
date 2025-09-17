@@ -8,6 +8,12 @@ import software.amazon.awscdk.CfnOutput;
 import software.amazon.awscdk.Stack;
 import software.amazon.awscdk.StackProps;
 import software.amazon.awscdk.services.autoscaling.AutoScalingGroup;
+import software.amazon.awscdk.services.ec2.AclCidr;
+import software.amazon.awscdk.services.ec2.AclTraffic;
+import software.amazon.awscdk.services.ec2.Action;
+import software.amazon.awscdk.services.ec2.CfnRoute;
+import software.amazon.awscdk.services.ec2.CfnVPCPeeringConnection;
+import software.amazon.awscdk.services.ec2.CommonNetworkAclEntryOptions;
 import software.amazon.awscdk.services.ec2.GatewayVpcEndpoint;
 import software.amazon.awscdk.services.ec2.GatewayVpcEndpointAwsService;
 import software.amazon.awscdk.services.ec2.ISecurityGroup;
@@ -18,13 +24,17 @@ import software.amazon.awscdk.services.ec2.InstanceSize;
 import software.amazon.awscdk.services.ec2.InstanceType;
 import software.amazon.awscdk.services.ec2.InterfaceVpcEndpoint;
 import software.amazon.awscdk.services.ec2.InterfaceVpcEndpointAwsService;
+import software.amazon.awscdk.services.ec2.IpAddresses;
+import software.amazon.awscdk.services.ec2.NetworkAcl;
 import software.amazon.awscdk.services.ec2.Port;
 import software.amazon.awscdk.services.ec2.SecurityGroup;
 import software.amazon.awscdk.services.ec2.SecurityGroupProps;
 import software.amazon.awscdk.services.ec2.SubnetConfiguration;
 import software.amazon.awscdk.services.ec2.SubnetSelection;
 import software.amazon.awscdk.services.ec2.SubnetType;
+import software.amazon.awscdk.services.ec2.TrafficDirection;
 import software.amazon.awscdk.services.ec2.Vpc;
+import software.amazon.awscdk.services.ec2.VpcLookupOptions;
 import software.amazon.awscdk.services.ecr.Repository;
 import software.amazon.awscdk.services.ecs.AsgCapacityProvider;
 import software.amazon.awscdk.services.ecs.CapacityProviderStrategy;
@@ -47,9 +57,13 @@ import software.constructs.Construct;
 
 public class CdkStack extends Stack {
 
+	// Assuming USERVPC CIDR block is 10.1.0.0/16 from buildbox stack
+	private static final String ecomVPCCIDR = "10.2.0.0/16";
+	private static final String userVPCCIDR = "10.1.0.0/16";
+
 	private Stack stack;
 
-	private IVpc vpc;
+	private Vpc vpc;
 	private InterfaceVpcEndpoint endpoint;
 	private ISecurityGroup smepsg;
 	private ISecurityGroup ecsepsg;
@@ -71,6 +85,7 @@ public class CdkStack extends Stack {
 		stack = this;
 
 		setupNetworking();
+		setupVPCPeering();
 		setupCommonVPCEndpoints();
 		setupS3();
 		setupRunDDLLambda("/home/cloudshell-user/ECOM/modules/CommonModule/");
@@ -111,17 +126,17 @@ public class CdkStack extends Stack {
 		// set default capacity provider
 		cluster.addDefaultCapacityProviderStrategy(List.of(CapacityProviderStrategy.builder()
 				.capacityProvider(capacityProvider.getCapacityProviderName()).weight(1).build()));
-		
+
 		// setup cluster namespace
-		namespace = PrivateDnsNamespace.Builder.create(this, "EcomNamespace")
-				.name("ecom.internal").vpc(vpc).build();
+		namespace = PrivateDnsNamespace.Builder.create(this, "EcomNamespace").name("ecom.internal").vpc(vpc).build();
 
 		// create ECR to hold docker images & grant access to it
 		ecrrepo = Repository.Builder.create(this, "ecomrepo").repositoryName("ecomrepo").build();
 		ecrrepo.grantRead(asg);
 		ecrrepo.grantRead(ecsInstanceRole);
-		
-		// create endpoints to communicate with ecs & cloudwatch logs - use same sg for all endpoints
+
+		// create endpoints to communicate with ecs & cloudwatch logs - use same sg for
+		// all endpoints
 		List<ISubnet> privateSubnets = vpc.getIsolatedSubnets();
 		List<ISubnet> subPrivateSubnets = List.of(privateSubnets.get(0), privateSubnets.get(1));
 		ecsepsg = new SecurityGroup(this, "ECSEPSecurityGroup",
@@ -135,13 +150,13 @@ public class CdkStack extends Stack {
 				.service(InterfaceVpcEndpointAwsService.ECS).privateDnsEnabled(true).securityGroups(List.of(ecsepsg))
 				.open(true).subnets(SubnetSelection.builder().subnets(subPrivateSubnets).build()).build();
 
-		InterfaceVpcEndpoint ecsAgentEndpoint = InterfaceVpcEndpoint.Builder.create(this, "ECSAgtInterfaceEndpoint").vpc(vpc)
-				.service(InterfaceVpcEndpointAwsService.ECS_AGENT).privateDnsEnabled(true)
+		InterfaceVpcEndpoint ecsAgentEndpoint = InterfaceVpcEndpoint.Builder.create(this, "ECSAgtInterfaceEndpoint")
+				.vpc(vpc).service(InterfaceVpcEndpointAwsService.ECS_AGENT).privateDnsEnabled(true)
 				.securityGroups(List.of(ecsepsg)).open(true)
 				.subnets(SubnetSelection.builder().subnets(subPrivateSubnets).build()).build();
 
-		InterfaceVpcEndpoint ecsTelEndpoint = InterfaceVpcEndpoint.Builder.create(this, "ECSTelInterfaceEndpoint").vpc(vpc)
-				.service(InterfaceVpcEndpointAwsService.ECS_TELEMETRY).privateDnsEnabled(true)
+		InterfaceVpcEndpoint ecsTelEndpoint = InterfaceVpcEndpoint.Builder.create(this, "ECSTelInterfaceEndpoint")
+				.vpc(vpc).service(InterfaceVpcEndpointAwsService.ECS_TELEMETRY).privateDnsEnabled(true)
 				.securityGroups(List.of(ecsepsg)).open(true)
 				.subnets(SubnetSelection.builder().subnets(subPrivateSubnets).build()).build();
 
@@ -149,15 +164,14 @@ public class CdkStack extends Stack {
 				.service(InterfaceVpcEndpointAwsService.ECR).privateDnsEnabled(true).securityGroups(List.of(ecsepsg))
 				.open(true).subnets(SubnetSelection.builder().subnets(subPrivateSubnets).build()).build();
 
-		InterfaceVpcEndpoint ecrDckrEndpoint = InterfaceVpcEndpoint.Builder.create(this, "ECRDckrInterfaceEndpoint").vpc(vpc)
-				.service(InterfaceVpcEndpointAwsService.ECR_DOCKER).privateDnsEnabled(true)
+		InterfaceVpcEndpoint ecrDckrEndpoint = InterfaceVpcEndpoint.Builder.create(this, "ECRDckrInterfaceEndpoint")
+				.vpc(vpc).service(InterfaceVpcEndpointAwsService.ECR_DOCKER).privateDnsEnabled(true)
 				.securityGroups(List.of(ecsepsg)).open(true)
 				.subnets(SubnetSelection.builder().subnets(subPrivateSubnets).build()).build();
-		
+
 		InterfaceVpcEndpoint sqsEndpoint = InterfaceVpcEndpoint.Builder.create(this, "ECSSqsInterfaceEndpoint").vpc(vpc)
-				.service(InterfaceVpcEndpointAwsService.SQS).privateDnsEnabled(true)
-				.securityGroups(List.of(ecsepsg)).open(true)
-				.subnets(SubnetSelection.builder().subnets(subPrivateSubnets).build()).build();
+				.service(InterfaceVpcEndpointAwsService.SQS).privateDnsEnabled(true).securityGroups(List.of(ecsepsg))
+				.open(true).subnets(SubnetSelection.builder().subnets(subPrivateSubnets).build()).build();
 
 		// need s3 endpoint to pull image from ecr
 		GatewayVpcEndpoint s3Endpoint = GatewayVpcEndpoint.Builder.create(this, "S3GatewayEndpoint").vpc(vpc)
@@ -215,12 +229,63 @@ public class CdkStack extends Stack {
 	}
 
 	private void setupNetworking() {
+
 		// fetch ECOM vpc if already existing, otherwise create it
 		vpc = Vpc.Builder.create(this, "ECOMVPC").vpcName("ECOMVPC")
 				.subnetConfiguration(Arrays.asList(SubnetConfiguration.builder().cidrMask(24).name("PrivateSubnet")
 						.subnetType(SubnetType.PRIVATE_ISOLATED).build()))
-				.maxAzs(99) // Use all AZ's
+				.ipAddresses(IpAddresses.cidr(ecomVPCCIDR)).maxAzs(99) // Use all AZ's
 				.enableDnsHostnames(true).enableDnsSupport(true).natGateways(0).build();
+
+		NetworkAcl ecomVPCNACL = NetworkAcl.Builder.create(this, "ECOMVPCNACL").vpc(vpc)
+				.subnetSelection(SubnetSelection.builder().subnetType(SubnetType.PRIVATE_ISOLATED).build()).build();
+
+		// allow 8080 port traffic from/to userVPC w.r.t ecomVPC
+		ecomVPCNACL.addEntry("Allow from User VPC",
+				CommonNetworkAclEntryOptions.builder().cidr(AclCidr.ipv4(userVPCCIDR)).ruleNumber(200)
+						.traffic(AclTraffic.tcpPort(8080)).direction(TrafficDirection.INGRESS).ruleAction(Action.ALLOW)
+						.build());
+
+		ecomVPCNACL.addEntry("Allow to User VPC",
+				CommonNetworkAclEntryOptions.builder().cidr(AclCidr.ipv4(userVPCCIDR)).ruleNumber(300)
+						.traffic(AclTraffic.tcpPortRange(1024, 65535)).direction(TrafficDirection.EGRESS)
+						.ruleAction(Action.ALLOW).build());
+	}
+
+	private void setupVPCPeering() {
+		// fetch user vpc attributes
+		String userVPCIDStr = System.getenv("USERVPCID");
+		String userVPCSGStr = System.getenv("USERVPCSG");
+		String userVPCNACLStr = System.getenv("USERVPCNACL");
+
+		IVpc uservpc = Vpc.fromLookup(this, userVPCIDStr, VpcLookupOptions.builder().vpcId(userVPCIDStr).build());
+		ISecurityGroup userVPCSG = SecurityGroup.fromLookupById(this, userVPCSGStr, userVPCSGStr);
+
+		// fetch ecom vpc variables
+		String ecomVPCSGStr = vpc.getVpcDefaultSecurityGroup();
+		String ecomVPCNACLStr = vpc.getVpcDefaultNetworkAcl();
+
+		ISecurityGroup ecomVPCSG = SecurityGroup.fromLookupById(this, ecomVPCSGStr, ecomVPCSGStr);
+
+		CfnVPCPeeringConnection peeringConnection = CfnVPCPeeringConnection.Builder
+				.create(this, "ECOMAndUSERVPCPeering").vpcId(vpc.getVpcId()).peerVpcId(uservpc.getVpcId()).build();
+
+		// add routes between both vpc's
+		for (ISubnet subnet : vpc.getPrivateSubnets()) {
+			CfnRoute.Builder.create(this, "RouteFromECOMtoUSERVPC" + subnet.getNode().getId())
+					.routeTableId(subnet.getRouteTable().getRouteTableId()).destinationCidrBlock(userVPCCIDR)
+					.vpcPeeringConnectionId(peeringConnection.getRef()).build();
+		}
+
+		for (ISubnet subnet : uservpc.getPrivateSubnets()) {
+			CfnRoute.Builder.create(this, "RouteFromUSERtoECOMVPC" + subnet.getNode().getId())
+					.routeTableId(subnet.getRouteTable().getRouteTableId()).destinationCidrBlock(ecomVPCCIDR)
+					.vpcPeeringConnectionId(peeringConnection.getRef()).build();
+		}
+
+		// add sg entries for both vpc's
+		ecomVPCSG.addIngressRule(userVPCSG, Port.tcp(8080), "Allow incoming connections on port 8080 from User VPC");
+		userVPCSG.addEgressRule(ecomVPCSG, Port.tcp(8080), "Allow outgoing connections on port 8080 to ECOM VPC");
 	}
 
 	/**
@@ -242,6 +307,5 @@ public class CdkStack extends Stack {
 		CfnOutput.Builder.create(this, "ECSASGROLE").value(asg.getRole().getRoleArn()).build();
 		CfnOutput.Builder.create(this, "ECSASGSG").value(asgsg.getSecurityGroupId()).build();
 		CfnOutput.Builder.create(this, "ECSNMSPARN").value(namespace.getNamespaceArn()).build();
-      CfnOutput.Builder.create(this, "ECSNMSPID").value(namespace.getNamespaceId()).build();
 	}
 }

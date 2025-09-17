@@ -126,7 +126,12 @@ public class CdkApp {
 		checkEnvVariableNotEmpty("ECSASGROLE");
 		checkEnvVariableNotEmpty("ECSASGSG");
 		checkEnvVariableNotEmpty("ECSNMSPARN");
-      checkEnvVariableNotEmpty("ECSNMSPID");		
+		checkEnvVariableNotEmpty("ECSNMSPID");
+		checkEnvVariableNotEmpty("INTERNALUSERPOOLID");
+		checkEnvVariableNotEmpty("USERVPCID");
+		checkEnvVariableNotEmpty("ALBARN");
+		checkEnvVariableNotEmpty("ALBSG");
+		checkEnvVariableNotEmpty("ALBCERTARN");
 	}
 
 	private static void checkEnvVariableWithDefaults(String variableName, Integer defaultVariableValue) {

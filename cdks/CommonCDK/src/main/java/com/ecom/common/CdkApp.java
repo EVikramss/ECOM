@@ -104,6 +104,10 @@ public class CdkApp {
 		if (deploymentRegion == null || deploymentRegion.trim().length() == 0) {
 			deploymentRegion = "us-east-1";
 		}
+		
+		checkEnvVariableNotEmpty("USERVPCID");
+		checkEnvVariableNotEmpty("USERVPCSG");
+		checkEnvVariableNotEmpty("USERVPCNACL");
 	}
 
 	private static void checkEnvVariableWithDefaults(String variableName, Integer defaultVariableValue) {
