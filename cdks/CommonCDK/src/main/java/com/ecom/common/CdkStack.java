@@ -255,17 +255,7 @@ public class CdkStack extends Stack {
 	private void setupVPCPeering() {
 		// fetch user vpc attributes
 		String userVPCIDStr = System.getenv("USERVPCID");
-		String userVPCSGStr = System.getenv("USERVPCSG");
-		String userVPCNACLStr = System.getenv("USERVPCNACL");
-
 		IVpc uservpc = Vpc.fromLookup(this, userVPCIDStr, VpcLookupOptions.builder().vpcId(userVPCIDStr).build());
-		ISecurityGroup userVPCSG = SecurityGroup.fromLookupById(this, userVPCSGStr, userVPCSGStr);
-
-		// fetch ecom vpc variables
-		String ecomVPCSGStr = vpc.getVpcDefaultSecurityGroup();
-		String ecomVPCNACLStr = vpc.getVpcDefaultNetworkAcl();
-
-		ISecurityGroup ecomVPCSG = SecurityGroup.fromLookupById(this, ecomVPCSGStr, ecomVPCSGStr);
 
 		CfnVPCPeeringConnection peeringConnection = CfnVPCPeeringConnection.Builder
 				.create(this, "ECOMAndUSERVPCPeering").vpcId(vpc.getVpcId()).peerVpcId(uservpc.getVpcId()).build();
@@ -282,10 +272,6 @@ public class CdkStack extends Stack {
 					.routeTableId(subnet.getRouteTable().getRouteTableId()).destinationCidrBlock(ecomVPCCIDR)
 					.vpcPeeringConnectionId(peeringConnection.getRef()).build();
 		}
-
-		// add sg entries for both vpc's
-		ecomVPCSG.addIngressRule(userVPCSG, Port.tcp(8080), "Allow incoming connections on port 8080 from User VPC");
-		userVPCSG.addEgressRule(ecomVPCSG, Port.tcp(8080), "Allow outgoing connections on port 8080 to ECOM VPC");
 	}
 
 	/**
@@ -307,5 +293,6 @@ public class CdkStack extends Stack {
 		CfnOutput.Builder.create(this, "ECSASGROLE").value(asg.getRole().getRoleArn()).build();
 		CfnOutput.Builder.create(this, "ECSASGSG").value(asgsg.getSecurityGroupId()).build();
 		CfnOutput.Builder.create(this, "ECSNMSPARN").value(namespace.getNamespaceArn()).build();
+		CfnOutput.Builder.create(this, "ECSNMSPID").value(namespace.getNamespaceId()).build();
 	}
 }

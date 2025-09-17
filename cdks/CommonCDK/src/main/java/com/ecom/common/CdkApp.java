@@ -106,8 +106,6 @@ public class CdkApp {
 		}
 		
 		checkEnvVariableNotEmpty("USERVPCID");
-		checkEnvVariableNotEmpty("USERVPCSG");
-		checkEnvVariableNotEmpty("USERVPCNACL");
 	}
 
 	private static void checkEnvVariableWithDefaults(String variableName, Integer defaultVariableValue) {

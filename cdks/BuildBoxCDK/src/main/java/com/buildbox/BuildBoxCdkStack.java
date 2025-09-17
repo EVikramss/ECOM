@@ -22,15 +22,11 @@ import software.amazon.awscdk.services.cognito.SignInAliases;
 import software.amazon.awscdk.services.cognito.UserPool;
 import software.amazon.awscdk.services.cognito.UserPoolClient;
 import software.amazon.awscdk.services.cognito.UserPoolDomain;
-import software.amazon.awscdk.services.ec2.AclCidr;
-import software.amazon.awscdk.services.ec2.AclTraffic;
-import software.amazon.awscdk.services.ec2.Action;
 import software.amazon.awscdk.services.ec2.BlockDevice;
 import software.amazon.awscdk.services.ec2.BlockDeviceVolume;
 import software.amazon.awscdk.services.ec2.CfnEIP;
 import software.amazon.awscdk.services.ec2.CfnNatGateway;
 import software.amazon.awscdk.services.ec2.CfnRoute;
-import software.amazon.awscdk.services.ec2.CommonNetworkAclEntryOptions;
 import software.amazon.awscdk.services.ec2.EbsDeviceOptions;
 import software.amazon.awscdk.services.ec2.EbsDeviceVolumeType;
 import software.amazon.awscdk.services.ec2.ISubnet;
@@ -41,14 +37,12 @@ import software.amazon.awscdk.services.ec2.InstanceSize;
 import software.amazon.awscdk.services.ec2.InstanceType;
 import software.amazon.awscdk.services.ec2.IpAddresses;
 import software.amazon.awscdk.services.ec2.MachineImage;
-import software.amazon.awscdk.services.ec2.NetworkAcl;
 import software.amazon.awscdk.services.ec2.Port;
 import software.amazon.awscdk.services.ec2.SecurityGroup;
 import software.amazon.awscdk.services.ec2.SecurityGroupProps;
 import software.amazon.awscdk.services.ec2.SubnetConfiguration;
 import software.amazon.awscdk.services.ec2.SubnetSelection;
 import software.amazon.awscdk.services.ec2.SubnetType;
-import software.amazon.awscdk.services.ec2.TrafficDirection;
 import software.amazon.awscdk.services.ec2.UserData;
 import software.amazon.awscdk.services.ec2.Vpc;
 import software.amazon.awscdk.services.elasticloadbalancingv2.ApplicationLoadBalancer;
@@ -264,21 +258,6 @@ public class BuildBoxCdkStack extends Stack {
 				.ipAddresses(IpAddresses.cidr(buildBoxCIDR)).maxAzs(99) // Use all AZ's
 				.natGateways(0).build();
 
-		// set NACL
-		NetworkAcl buildboxVPCNACL = NetworkAcl.Builder.create(this, "BuildBoxVPCNACL").vpc(vpc)
-				.subnetSelection(SubnetSelection.builder().subnetType(SubnetType.PRIVATE_ISOLATED).build()).build();
-
-		// allow all out traffic
-		buildboxVPCNACL.addEntry("Allow from Build Box VPC",
-				CommonNetworkAclEntryOptions.builder().cidr(AclCidr.ipv4("0.0.0.0/0")).ruleNumber(200)
-						.traffic(AclTraffic.tcpPortRange(443, 444)).direction(TrafficDirection.INGRESS)
-						.ruleAction(Action.ALLOW).build());
-
-		buildboxVPCNACL.addEntry("Allow to Build Box VPC",
-				CommonNetworkAclEntryOptions.builder().cidr(AclCidr.ipv4("0.0.0.0/0")).ruleNumber(300)
-						.traffic(AclTraffic.allTraffic()).direction(TrafficDirection.EGRESS).ruleAction(Action.ALLOW)
-						.build());
-
 		// get list of private and public subnets
 		List<ISubnet> publicSubnets = vpc.getPublicSubnets();
 		List<ISubnet> privateSubnets = vpc.getIsolatedSubnets();
@@ -323,8 +302,6 @@ public class BuildBoxCdkStack extends Stack {
 		CfnOutput.Builder.create(this, "INTERNALUSERPOOLID").value(userPool.getUserPoolId()).build();
 		CfnOutput.Builder.create(this, "JENKINSCLIENTID").value(userPoolClient.getUserPoolClientId()).build();
 		CfnOutput.Builder.create(this, "BUILDBOXVPCID").value(vpc.getVpcId()).build();
-		CfnOutput.Builder.create(this, "BUILDBOXVPCSG").value(vpc.getVpcDefaultSecurityGroup()).build();
-		CfnOutput.Builder.create(this, "BUILDBOXVPCNACL").value(vpc.getVpcDefaultNetworkAcl()).build();
 		CfnOutput.Builder.create(this, "ALBCERTARN").value(System.getenv("CERT_ARN")).build();
 	}
 
