@@ -539,7 +539,7 @@ public class CdkStack extends Stack {
 		// point to getDataService
 		ApplicationTargetGroup targetGroup = ApplicationTargetGroup.Builder.create(this, "ALBTargetGroup").vpc(vpc)
 				.port(8080).protocol(ApplicationProtocol.HTTP).targetType(TargetType.IP)
-				.targets(List.of(getDataService)).healthCheck(HealthCheck.builder().enabled(false).build()).build();
+				.targets(List.of(getDataService)).build();
 
 		ICertificate existingCertificate = Certificate.fromCertificateArn(this, "CERT_ARN", albCertARNStr);
 		alb.addListener("HttpsListener",
