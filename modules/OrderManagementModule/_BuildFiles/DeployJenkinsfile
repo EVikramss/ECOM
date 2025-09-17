@@ -219,7 +219,7 @@ pipeline {
 					if(!areAllServicesExisting && runCDK) {
 						echo "PostDeploy step"
 						
-						def mainScriptPath = "${repoPath}/modules/OrderManagementModule/_scripts/preDeploy.sh"
+						def mainScriptPath = "${repoPath}/modules/OrderManagementModule/_scripts/postDeploy.sh"
 						echo "Executing ${mainScriptPath}"
 						sh "${mainScriptPath}"
 						

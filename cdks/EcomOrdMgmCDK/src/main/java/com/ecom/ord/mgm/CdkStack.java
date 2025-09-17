@@ -486,12 +486,13 @@ public class CdkStack extends Stack {
 
 		// create service for task - use same sg as asg
 		// expose service with cloud map and dns A records
+      // set count as 0 and start service after initDB
 		Ec2Service service = Ec2Service.Builder.create(this, jobName + "Service").cluster(cluster)
 				.serviceName(jobName + "Service").securityGroups(List.of(asgsg))
 				.cloudMapOptions(CloudMapOptions.builder().cloudMapNamespace(pdn).name(jobName.toLowerCase())
 						.dnsRecordType(DnsRecordType.A).build())
 				.vpcSubnets(SubnetSelection.builder().subnetType(SubnetType.PRIVATE_ISOLATED).build())
-				.taskDefinition(taskDefinition).desiredCount(1).build();
+				.taskDefinition(taskDefinition).desiredCount(0).build();
 
 		service.getNode().addDependency(dbProxy);
 	}
