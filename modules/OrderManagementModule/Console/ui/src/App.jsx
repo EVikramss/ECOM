@@ -2,14 +2,12 @@ import './App.css'
 import Router from './common/Router'
 import Header from './common/Header'
 import { useAuth } from "react-oidc-context";
-import { ApolloProvider } from '@apollo/client';
-import { useEffect, useMemo } from 'react';
-import { CreateApolloClient } from './common/AwsClient';
+import { useEffect } from 'react';
+import Environment from './common/Context';
 
 function App() {
   const auth = useAuth();
   const token = auth.user?.id_token;
-  const client = useMemo(() => CreateApolloClient(token), [token]);
 
   useEffect(() => {
     if (!auth.isLoading && !auth.isAuthenticated) {
@@ -24,10 +22,10 @@ function App() {
   if (auth.isAuthenticated) {
     return (
       <>
-        <ApolloProvider client={client}>
+        <Environment.Provider value={token}>
           <Header />
           <Router />
-        </ApolloProvider>
+        </Environment.Provider>
       </>
     )
   }

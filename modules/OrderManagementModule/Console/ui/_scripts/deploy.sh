@@ -17,11 +17,10 @@ aws cognito-idp update-user-pool-client --user-pool-id "$client_pool_id" --clien
 cognitoURL="https://cognito-idp.us-east-1.amazonaws.com/$client_pool_id"
 
 # get app sync url
-app_sync_api_id=$(aws cloudformation describe-stacks --stack-name ECOMORDMGM --query "Stacks[0].Outputs[?OutputKey=='APPSYNCAPIID'].OutputValue" --output text)
-graphURL=$(aws appsync get-graphql-api --api-id "$app_sync_api_id" --query "graphqlApi.uris.GRAPHQL" --output text)
+httpApiEP=$(aws cloudformation describe-stacks --stack-name ECOMORDMGM --query "Stacks[0].Outputs[?OutputKey=='APIEP'].OutputValue" --output text)
 
 # update url's in ui
-sed -i "s#GRAPH_URL#${graphURL}#g" src/common/config.json
+sed -i "s#API_EP#${httpApiEP}#g" src/common/config.json
 sed -i "s#COGNITO_URL#${cognitoURL}#g" src/common/config.json
 sed -i "s#CLIENT_ID#${client_id}#g" src/common/config.json
 sed -i "s#REDIRECT_URL#${updated_callback_url}#g" src/common/config.json

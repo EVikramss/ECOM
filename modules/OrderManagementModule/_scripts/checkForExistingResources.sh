@@ -17,12 +17,6 @@ ECSASGSG=$(aws cloudformation describe-stacks --stack-name COMMON --query "Stack
 ECSNMSPARN=$(aws cloudformation describe-stacks --stack-name COMMON --query "Stacks[0].Outputs[?OutputKey=='ECSNMSPARN'].OutputValue" --output text)
 ECSNMSPID=$(aws cloudformation describe-stacks --stack-name COMMON --query "Stacks[0].Outputs[?OutputKey=='ECSNMSPID'].OutputValue" --output text)
 
-INTERNALUSERPOOLID=$(aws cloudformation describe-stacks --stack-name BuildBoxStack --query "Stacks[0].Outputs[?OutputKey=='INTERNALUSERPOOLID'].OutputValue" --output text)
-USERVPCID=$(aws cloudformation describe-stacks --stack-name BuildBoxStack --query "Stacks[0].Outputs[?OutputKey=='BUILDBOXVPCID'].OutputValue" --output text)
-ALBARN=$(aws cloudformation describe-stacks --stack-name BuildBoxStack --query "Stacks[0].Outputs[?OutputKey=='ALBARN'].OutputValue" --output text)
-ALBSG=$(aws cloudformation describe-stacks --stack-name BuildBoxStack --query "Stacks[0].Outputs[?OutputKey=='ALBSG'].OutputValue" --output text)
-ALBCERTARN=$(aws cloudformation describe-stacks --stack-name BuildBoxStack --query "Stacks[0].Outputs[?OutputKey=='ALBCERTARN'].OutputValue" --output text)
-
 # inventory url
 INVAVLURL=$(aws cloudformation describe-stacks --stack-name ECOMINV --query "Stacks[0].Outputs[?OutputKey=='AvailabilityOpURL'].OutputValue" --output text)
 
@@ -42,8 +36,3 @@ export INVAVLURL
 export ECSASGSG
 export ECSNMSPARN
 export ECSNMSPID
-export INTERNALUSERPOOLID
-export USERVPCID
-export ALBARN
-export ALBSG
-export ALBCERTARN

@@ -85,7 +85,7 @@ public class CdkStack extends Stack {
 		stack = this;
 
 		setupNetworking();
-		setupVPCPeering();
+		// setupVPCPeering();
 		setupCommonVPCEndpoints();
 		setupS3();
 		setupRunDDLLambda("/home/cloudshell-user/ECOM/modules/CommonModule/");
@@ -237,19 +237,25 @@ public class CdkStack extends Stack {
 				.ipAddresses(IpAddresses.cidr(ecomVPCCIDR)).maxAzs(99) // Use all AZ's
 				.enableDnsHostnames(true).enableDnsSupport(true).natGateways(0).build();
 
-		NetworkAcl ecomVPCNACL = NetworkAcl.Builder.create(this, "ECOMVPCNACL").vpc(vpc)
-				.subnetSelection(SubnetSelection.builder().subnetType(SubnetType.PRIVATE_ISOLATED).build()).build();
-
-		// allow 8080 port traffic from/to userVPC w.r.t ecomVPC
-		ecomVPCNACL.addEntry("Allow from User VPC",
-				CommonNetworkAclEntryOptions.builder().cidr(AclCidr.ipv4(userVPCCIDR)).ruleNumber(200)
-						.traffic(AclTraffic.tcpPort(8080)).direction(TrafficDirection.INGRESS).ruleAction(Action.ALLOW)
-						.build());
-
-		ecomVPCNACL.addEntry("Allow to User VPC",
-				CommonNetworkAclEntryOptions.builder().cidr(AclCidr.ipv4(userVPCCIDR)).ruleNumber(300)
-						.traffic(AclTraffic.tcpPortRange(1024, 65535)).direction(TrafficDirection.EGRESS)
-						.ruleAction(Action.ALLOW).build());
+		/*
+		 * NetworkAcl ecomVPCNACL = NetworkAcl.Builder.create(this,
+		 * "ECOMVPCNACL").vpc(vpc)
+		 * .subnetSelection(SubnetSelection.builder().subnetType(SubnetType.
+		 * PRIVATE_ISOLATED).build()).build();
+		 * 
+		 * // allow 8080 port traffic from/to userVPC w.r.t ecomVPC
+		 * ecomVPCNACL.addEntry("Allow from User VPC",
+		 * CommonNetworkAclEntryOptions.builder().cidr(AclCidr.ipv4(userVPCCIDR)).
+		 * ruleNumber(200)
+		 * .traffic(AclTraffic.tcpPort(8080)).direction(TrafficDirection.INGRESS).
+		 * ruleAction(Action.ALLOW) .build());
+		 * 
+		 * ecomVPCNACL.addEntry("Allow to User VPC",
+		 * CommonNetworkAclEntryOptions.builder().cidr(AclCidr.ipv4(userVPCCIDR)).
+		 * ruleNumber(300) .traffic(AclTraffic.tcpPortRange(1024,
+		 * 65535)).direction(TrafficDirection.EGRESS)
+		 * .ruleAction(Action.ALLOW).build());
+		 */
 	}
 
 	private void setupVPCPeering() {

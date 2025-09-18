@@ -119,8 +119,8 @@ public class BuildBoxCdkStack extends Stack {
 
 	private void setupCognito() {
 		// create cognito user pool
-		userPool = UserPool.Builder.create(this, "InternalUserPool").selfSignUpEnabled(false)
-				.userPoolName("InternalUserPool").signInAliases(SignInAliases.builder().username(true).build()).build();
+		userPool = UserPool.Builder.create(this, "BuildBoxUserPool").selfSignUpEnabled(false)
+				.userPoolName("BuildBoxUserPool").signInAliases(SignInAliases.builder().username(true).build()).build();
 
 		// create cognito domain
 		userPoolDomain = UserPoolDomain.Builder.create(this, "BuildBoxPoolDomain").userPool(userPool)
@@ -143,7 +143,7 @@ public class BuildBoxCdkStack extends Stack {
 
 	private void createALB() {
 		// create application load balancer
-		alb = ApplicationLoadBalancer.Builder.create(this, "ECOMALB").vpc(vpc).securityGroup(albSecurityGroup)
+		alb = ApplicationLoadBalancer.Builder.create(this, "BuildBoxALB").vpc(vpc).securityGroup(albSecurityGroup)
 				.internetFacing(true).build();
 	}
 
@@ -299,8 +299,8 @@ public class BuildBoxCdkStack extends Stack {
 		CfnOutput.Builder.create(this, "ALBURL").value("https://" + alb.getLoadBalancerDnsName()).build();
 		CfnOutput.Builder.create(this, "ALBARN").value(alb.getLoadBalancerArn()).build();
 		CfnOutput.Builder.create(this, "ALBSG").value(albSecurityGroup.getSecurityGroupId()).build();
-		CfnOutput.Builder.create(this, "INTERNALUSERPOOLID").value(userPool.getUserPoolId()).build();
-		CfnOutput.Builder.create(this, "JENKINSCLIENTID").value(userPoolClient.getUserPoolClientId()).build();
+		CfnOutput.Builder.create(this, "BUILDBOXUSERPOOLID").value(userPool.getUserPoolId()).build();
+		CfnOutput.Builder.create(this, "BUILDBOXCLIENTID").value(userPoolClient.getUserPoolClientId()).build();
 		CfnOutput.Builder.create(this, "BUILDBOXVPCID").value(vpc.getVpcId()).build();
 		CfnOutput.Builder.create(this, "ALBCERTARN").value(System.getenv("CERT_ARN")).build();
 	}

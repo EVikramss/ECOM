@@ -1,6 +1,5 @@
 package com.ecom.ord.mgm;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -10,14 +9,14 @@ import software.amazon.awscdk.CfnOutput;
 import software.amazon.awscdk.Duration;
 import software.amazon.awscdk.Stack;
 import software.amazon.awscdk.StackProps;
-import software.amazon.awscdk.aws_apigatewayv2_integrations.HttpLambdaIntegration;
+import software.amazon.awscdk.aws_apigatewayv2_authorizers.HttpUserPoolAuthorizer;
+import software.amazon.awscdk.aws_apigatewayv2_integrations.HttpAlbIntegration;
 import software.amazon.awscdk.services.amplify.CfnApp;
 import software.amazon.awscdk.services.amplify.CfnBranch;
 import software.amazon.awscdk.services.apigatewayv2.AddRoutesOptions;
 import software.amazon.awscdk.services.apigatewayv2.HttpApi;
-import software.amazon.awscdk.services.apigatewayv2.HttpApiProps;
 import software.amazon.awscdk.services.apigatewayv2.HttpMethod;
-import software.amazon.awscdk.services.apigatewayv2.HttpNoneAuthorizer;
+import software.amazon.awscdk.services.apigatewayv2.VpcLink;
 import software.amazon.awscdk.services.appsync.AuthorizationConfig;
 import software.amazon.awscdk.services.appsync.AuthorizationMode;
 import software.amazon.awscdk.services.appsync.AuthorizationType;
@@ -70,12 +69,12 @@ import software.amazon.awscdk.services.ecs.LogDriver;
 import software.amazon.awscdk.services.ecs.NetworkMode;
 import software.amazon.awscdk.services.ecs.PortMapping;
 import software.amazon.awscdk.services.ecs.Secret;
+import software.amazon.awscdk.services.elasticloadbalancingv2.ApplicationListener;
 import software.amazon.awscdk.services.elasticloadbalancingv2.ApplicationLoadBalancer;
 import software.amazon.awscdk.services.elasticloadbalancingv2.ApplicationLoadBalancerAttributes;
 import software.amazon.awscdk.services.elasticloadbalancingv2.ApplicationProtocol;
 import software.amazon.awscdk.services.elasticloadbalancingv2.ApplicationTargetGroup;
 import software.amazon.awscdk.services.elasticloadbalancingv2.BaseApplicationListenerProps;
-import software.amazon.awscdk.services.elasticloadbalancingv2.HealthCheck;
 import software.amazon.awscdk.services.elasticloadbalancingv2.IApplicationLoadBalancer;
 import software.amazon.awscdk.services.elasticloadbalancingv2.ListenerAction;
 import software.amazon.awscdk.services.elasticloadbalancingv2.ListenerCertificate;
@@ -89,13 +88,7 @@ import software.amazon.awscdk.services.iam.ManagedPolicy;
 import software.amazon.awscdk.services.iam.PolicyStatement;
 import software.amazon.awscdk.services.iam.Role;
 import software.amazon.awscdk.services.iam.ServicePrincipal;
-import software.amazon.awscdk.services.lambda.Alias;
-import software.amazon.awscdk.services.lambda.Code;
 import software.amazon.awscdk.services.lambda.Function;
-import software.amazon.awscdk.services.lambda.FunctionUrl;
-import software.amazon.awscdk.services.lambda.FunctionUrlAuthType;
-import software.amazon.awscdk.services.lambda.FunctionUrlOptions;
-import software.amazon.awscdk.services.lambda.Runtime;
 import software.amazon.awscdk.services.logs.LogGroup;
 import software.amazon.awscdk.services.logs.RetentionDays;
 import software.amazon.awscdk.services.rds.AuroraPostgresClusterEngineProps;
@@ -104,8 +97,6 @@ import software.amazon.awscdk.services.rds.ClusterInstance;
 import software.amazon.awscdk.services.rds.DBClusterStorageType;
 import software.amazon.awscdk.services.rds.DatabaseCluster;
 import software.amazon.awscdk.services.rds.DatabaseClusterEngine;
-import software.amazon.awscdk.services.rds.DatabaseProxy;
-import software.amazon.awscdk.services.rds.DatabaseProxyOptions;
 import software.amazon.awscdk.services.rds.IClusterEngine;
 import software.amazon.awscdk.services.rds.IClusterInstance;
 import software.amazon.awscdk.services.rds.ParameterGroup;
@@ -129,11 +120,9 @@ public class CdkStack extends Stack {
 
 	private IVpc vpc;
 	private IInterfaceVpcEndpoint endpoint;
-	private DatabaseProxy dbProxy;
 	private DatabaseCluster dbCluster;
 
 	private ISecret dbSecret;
-	private ISecurityGroup dbprxysg;
 	private ISecurityGroup smepsg;
 	private Role amplifyRole;
 	private ISecurityGroup asgsg;
@@ -145,9 +134,9 @@ public class CdkStack extends Stack {
 	private Queue createOrderQ;
 
 	private CfnApp amplifyApp;
-	private GraphqlApi appSyncAPI;
 
 	private Ec2Service getDataService;
+	private HttpApi ecsHTTPApi;
 
 	public CdkStack(final Construct scope, final String id, final StackProps props, Properties additionalProperties) {
 		super(scope, id, props);
@@ -164,11 +153,13 @@ public class CdkStack extends Stack {
 
 		lookupNetwork();
 		lookupEndpoints();
+
+		setupCognito();
 		createAuroraPostgresDB(dbreadRplCnt);
-		setupOrderConsole(baseDir);
 		setupSQS();
 		setupECSJobs();
-		configureALB();
+		exposeECSWithHttpApi();
+		setupOrderConsole(baseDir);
 
 		// record output variables
 		setupOutputVariables();
@@ -181,15 +172,6 @@ public class CdkStack extends Stack {
 
 	private void setupOrderConsole(String baseDir) {
 		baseDir = baseDir + "/Console/";
-
-		// setup lambda between app sync and rds
-		Function appSyncDatasource = setupLambda("dbEndpoint", baseDir);
-
-		// setup cognito for both appsync and ui auth
-		setupCognito();
-
-		// create app sync api
-		appSyncAPI = setupAppSync(appSyncDatasource, baseDir);
 
 		// create ui on amplify
 		setupAmplify();
@@ -296,88 +278,6 @@ public class CdkStack extends Stack {
 		cfnClient.addPropertyOverride("SupportedIdentityProviders", List.of("COGNITO"));
 	}
 
-	private Function setupLambda(String lambdaName, String baseDir) {
-
-		String relLambdaName = stackName + lambdaName;
-
-		SecurityGroup sg = new SecurityGroup(stack, relLambdaName + "SecurityGroup",
-				SecurityGroupProps.builder().vpc(vpc).allowAllOutbound(false).build());
-		dbprxysg.addIngressRule(sg, Port.POSTGRES);
-		smepsg.addIngressRule(sg, Port.HTTPS);
-		sg.addEgressRule(dbprxysg, Port.POSTGRES);
-		sg.addEgressRule(smepsg, Port.HTTPS);
-
-		Function function = Function.Builder.create(this, relLambdaName).runtime(Runtime.PYTHON_3_11)
-				.functionName(relLambdaName).code(Code.fromAsset(baseDir + lambdaName + ".zip"))
-				.handler("lambda_function.lambda_handler").securityGroups(Arrays.asList(sg)).vpc(vpc)
-				.environment(Map.of("SECRET_ARN", dbSecret.getSecretArn(), "DBPRX_EP", dbProxy.getEndpoint())).build();
-
-		// need to update lambda function to read
-		dbSecret.grantRead(function);
-
-		return function;
-	}
-
-	private void setupLambdaBackedAPI(String lambdaName, String baseDir, boolean deployAPI, boolean enableFunctionURL) {
-
-		String relLambdaName = stackName + lambdaName;
-
-		// create sg for lambda
-		SecurityGroup sg = new SecurityGroup(stack, relLambdaName + "SecurityGroup",
-				SecurityGroupProps.builder().vpc(vpc).allowAllOutbound(false).build());
-
-		// add ingress and egress rules
-		dbprxysg.addIngressRule(sg, Port.POSTGRES);
-		smepsg.addIngressRule(sg, Port.HTTPS);
-		sg.addEgressRule(dbprxysg, Port.POSTGRES);
-		sg.addEgressRule(smepsg, Port.HTTPS);
-
-		// create function builder
-		software.amazon.awscdk.services.lambda.Function.Builder functionBuilder = Function.Builder
-				.create(this, relLambdaName).runtime(Runtime.PYTHON_3_11).functionName(relLambdaName)
-				.code(Code.fromAsset(baseDir + lambdaName + ".zip")).handler("lambda_function.lambda_handler")
-				.securityGroups(Arrays.asList(sg)).vpc(vpc)
-				.environment(Map.of("SECRET_ARN", dbSecret.getSecretArn(), "DBPRX_EP", dbProxy.getEndpoint()));
-
-		// update reservedConcurrecy if greater than 0
-		Integer reservedConcurrecy = (Integer) additionalProperties.get(lambdaName + "ResvConcurrency");
-		if (reservedConcurrecy > 0) {
-			functionBuilder = functionBuilder.reservedConcurrentExecutions(reservedConcurrecy);
-		}
-		Function function = functionBuilder.build();
-
-		// update provisionedConcurrecy if greater than 0
-		Integer provisionedConcurrecy = (Integer) additionalProperties.get(lambdaName + "ProvConcurrency");
-		if (provisionedConcurrecy > 0) {
-			Alias alias = Alias.Builder.create(this, relLambdaName + "Alias").aliasName(relLambdaName + "Alias")
-					.provisionedConcurrentExecutions(provisionedConcurrecy).version(function.getCurrentVersion())
-					.build();
-		}
-
-		// need to update lambda function to read
-		dbSecret.grantRead(function);
-
-		if (enableFunctionURL) {
-			// output lambda https function url
-			FunctionUrl functionUrl = function
-					.addFunctionUrl(FunctionUrlOptions.builder().authType(FunctionUrlAuthType.NONE).build());
-			CfnOutput.Builder.create(this, lambdaName + "URL").value(functionUrl.getUrl()).build();
-		}
-
-		if (deployAPI) {
-			String pathName = lambdaName.substring(0, 1).toLowerCase() + lambdaName.substring(1);
-
-			// when invoking from api gateway retrieve payload as json.loads(event["body"])
-			HttpApi api = new HttpApi(this, relLambdaName + "API",
-					HttpApiProps.builder().apiName(relLambdaName + "API").build());
-			List<HttpMethod> mlist = new ArrayList<HttpMethod>();
-			mlist.add(HttpMethod.POST);
-			api.addRoutes(AddRoutesOptions.builder().path("/" + pathName).methods(mlist)
-					.integration(HttpLambdaIntegration.Builder.create(lambdaName + "Integ", function).build())
-					.authorizer(new HttpNoneAuthorizer()).build());
-		}
-	}
-
 	private void createAuroraPostgresDB(int dbreadRplCnt) {
 		// create DB - start
 
@@ -411,11 +311,6 @@ public class CdkStack extends Stack {
 		 * .automaticallyAfter(Duration.days(30)).rotateImmediatelyOnUpdate(true).build(
 		 * ));
 		 */
-
-		// create rds proxy
-		dbprxysg = new SecurityGroup(stack, "rdsproxySecurityGroup", SecurityGroupProps.builder().vpc(vpc).build());
-		dbProxy = dbCluster.addProxy("RDSProxy", DatabaseProxyOptions.builder().securityGroups(List.of(dbprxysg))
-				.secrets(Arrays.asList(dbCluster.getSecret())).vpc(vpc).iamAuth(false).requireTls(true).build());
 		// create DB - end
 
 		// add permissions for RunDDLQuery Lambda
@@ -442,9 +337,7 @@ public class CdkStack extends Stack {
 		createOrderQ.grantConsumeMessages(asgRole);
 
 		// add asg role to db proxy sg
-		dbprxysg.addIngressRule(asgsg, Port.POSTGRES);
 		smepsg.addIngressRule(asgsg, Port.HTTPS);
-		asgsg.addEgressRule(dbprxysg, Port.POSTGRES);
 		asgsg.addEgressRule(smepsg, Port.HTTPS);
 
 		String baseDir = "/home/ec2-user/deploymentWorkspace2/modules/OrderManagementModule/";
@@ -487,10 +380,10 @@ public class CdkStack extends Stack {
 
 		Map<String, String> envVariables;
 		if ("CreateOrder".equals(jobName)) {
-			envVariables = Map.of("DBPRX_EP", dbProxy.getEndpoint(), "INVAVLURL", System.getenv("INVAVLURL"),
+			envVariables = Map.of("DBPRX_EP", dbCluster.getClusterEndpoint().getHostname(), "INVAVLURL", System.getenv("INVAVLURL"),
 					"CreateOrderQURL", createOrderQ.getQueueUrl());
 		} else {
-			envVariables = Map.of("DBPRX_EP", dbProxy.getEndpoint(), "INVAVLURL", System.getenv("INVAVLURL"));
+			envVariables = Map.of("DBPRX_EP", dbCluster.getClusterEndpoint().getHostname(), "INVAVLURL", System.getenv("INVAVLURL"));
 		}
 
 		// define container along with rds secret
@@ -513,9 +406,54 @@ public class CdkStack extends Stack {
 				.vpcSubnets(SubnetSelection.builder().subnetType(SubnetType.PRIVATE_ISOLATED).build())
 				.taskDefinition(taskDefinition).desiredCount(0).build();
 
-		service.getNode().addDependency(dbProxy);
+		service.getNode().addDependency(dbCluster);
 
 		return service;
+	}
+
+	private void exposeECSWithHttpApi() {
+		// create alb with sg
+		SecurityGroup albSecurityGroup = new SecurityGroup(this, "ECSALBSecurityGroup",
+				SecurityGroupProps.builder().vpc(vpc).allowAllOutbound(false).build());
+
+		ApplicationLoadBalancer alb = ApplicationLoadBalancer.Builder.create(this, "ECSALB").vpc(vpc)
+				.vpcSubnets(SubnetSelection.builder().subnetType(SubnetType.PRIVATE_ISOLATED).build())
+				.securityGroup(albSecurityGroup).internetFacing(false).build();
+
+		// point to getDataService
+		ApplicationTargetGroup targetGroup = ApplicationTargetGroup.Builder.create(this, "ALBTargetGroup").vpc(vpc)
+				.port(8080).protocol(ApplicationProtocol.HTTP).targetType(TargetType.IP)
+				.targets(List.of(getDataService)).build();
+
+		// listener for data service
+		ApplicationListener listener = alb.addListener("GetDataListener",
+				BaseApplicationListenerProps.builder().port(80).defaultTargetGroups(List.of(targetGroup)).build());
+
+		// create vpc link
+		SecurityGroup vpcLinkSecurityGroup = new SecurityGroup(this, "LinkSecurityGroup",
+				SecurityGroupProps.builder().vpc(vpc).allowAllOutbound(false).build());
+		VpcLink vpcLink = VpcLink.Builder.create(this, "VpcLink").vpc(vpc).securityGroups(List.of(vpcLinkSecurityGroup))
+				.build();
+
+		// update SG permissions
+		albSecurityGroup.addIngressRule(vpcLinkSecurityGroup, Port.allTraffic());
+		albSecurityGroup.addEgressRule(vpcLinkSecurityGroup, Port.allTraffic());
+		vpcLinkSecurityGroup.addEgressRule(albSecurityGroup, Port.allTraffic());
+		vpcLinkSecurityGroup.addIngressRule(albSecurityGroup, Port.allTraffic());
+
+		// integrate ALB listener with vpc link -
+		HttpAlbIntegration albIntegration = HttpAlbIntegration.Builder.create("ALBLinkIntegration", listener)
+				.method(HttpMethod.ANY).vpcLink(vpcLink).build();
+
+		// create authorizer for api gateway - with same client use for Amplify frontend
+		HttpUserPoolAuthorizer apiGatewayAuthorizer = HttpUserPoolAuthorizer.Builder
+				.create("ECSAPIAuthorizer", userPool).authorizerName("ECSAPIAuthorizer")
+				.userPoolClients(List.of(userPoolClient)).build();
+
+		// Create HTTP API using albIntegration
+		ecsHTTPApi = HttpApi.Builder.create(this, "GetDataHttpApi").build();
+		ecsHTTPApi.addRoutes(AddRoutesOptions.builder().path("/getOrder").methods(List.of(HttpMethod.GET))
+				.authorizer(apiGatewayAuthorizer).integration(albIntegration).build());
 	}
 
 	private void configureALB() {
@@ -574,12 +512,10 @@ public class CdkStack extends Stack {
 		// no underscores in output name
 		CfnOutput.Builder.create(this, "DBSECARN").value(dbSecret.getSecretArn()).build();
 		CfnOutput.Builder.create(this, "SSMEPID").value(endpoint.getVpcEndpointId()).build();
-		CfnOutput.Builder.create(this, "DBPRXYSGID").value(dbprxysg.getSecurityGroupId()).build();
-		CfnOutput.Builder.create(this, "DBPRXYEP").value(dbProxy.getEndpoint()).build();
 		CfnOutput.Builder.create(this, "AMPEP").value(amplifyApp.getAttrAppId()).build();
 		CfnOutput.Builder.create(this, "ORDMGMUSERPOOLID").value(userPool.getUserPoolId()).build();
 		CfnOutput.Builder.create(this, "ORDMGMCLIENTID").value(userPoolClient.getUserPoolClientId()).build();
-		CfnOutput.Builder.create(this, "APPSYNCAPIID").value(appSyncAPI.getApiId()).build();
 		CfnOutput.Builder.create(this, "AMPLIFYROLEARN").value(amplifyRole.getRoleArn()).build();
+		CfnOutput.Builder.create(this, "APIEP").value(ecsHTTPApi.getApiEndpoint()).build();
 	}
 }

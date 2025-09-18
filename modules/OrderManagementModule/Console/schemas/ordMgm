@@ -1,9 +1,0 @@
-type Order {
-	orderNo: ID!
-	orderDate: String!
-	entity: String!
-}
-
-type Query {
-	getOrder(orderNo: String!): Order
-}

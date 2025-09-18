@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # get client details from stack
-client_id=$(aws cloudformation describe-stacks --stack-name BuildBoxStack --query "Stacks[0].Outputs[?OutputKey=='JENKINSCLIENTID'].OutputValue" --output text)
-client_pool_id=$(aws cloudformation describe-stacks --stack-name BuildBoxStack --query "Stacks[0].Outputs[?OutputKey=='INTERNALUSERPOOLID'].OutputValue" --output text)
+client_id=$(aws cloudformation describe-stacks --stack-name BuildBoxStack --query "Stacks[0].Outputs[?OutputKey=='BUILDBOXCLIENTID'].OutputValue" --output text)
+client_pool_id=$(aws cloudformation describe-stacks --stack-name BuildBoxStack --query "Stacks[0].Outputs[?OutputKey=='BUILDBOXUSERPOOLID'].OutputValue" --output text)
 updated_callback_url=$(aws cognito-idp describe-user-pool-client --user-pool-id "$client_pool_id" --client-id "$client_id" --query "UserPoolClient.CallbackURLs" --output text | awk '{print tolower($0)}')
 
 # update call back url to lower case

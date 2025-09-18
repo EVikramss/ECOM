@@ -5,31 +5,34 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import './OrderSearch.css';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useLazyQuery, gql } from '@apollo/client';
-import { ORDER_SEARCH_QUERY } from '../common/Queries.js'
+import axios from 'axios';
+import { getToken } from '../common/Context'
+import config from '../common/config.json';
 
 function OrderSearch() {
     const [formData, setFormData] = useState({ orderNo: '' });
     const [errorVal, setErrorVal] = useState({ error: '' });
     const navigate = useNavigate();
-    const [fetchData, { loading, error, data }] = useLazyQuery(gql(ORDER_SEARCH_QUERY));
 
     const submit = async (e) => {
         e.preventDefault();
         const orderNo = formData.orderNo;
         setError("");
 
+        const token = getToken();
         try {
-            // searchOrder(orderNo)
-            fetchData({ variables: { input: orderNo } })
-                .then(result => {
-                    var orderData = result.data.getOrder;
-                    if (orderData == null) {
-                        setError("Order not found");
-                    } else {
-                        navigate('/orderDetail', { state: { data: orderData } });
-                    }
-                })
+            axios.get(config.apiURL + "/getOrder?orderNo=" + orderNo, {
+                headers: {
+                    Authorization: token
+                }
+            }).then(result => {
+                var orderData = result.data.getOrder;
+                if (orderData == null) {
+                    setError("Order not found");
+                } else {
+                    navigate('/orderDetail', { state: { data: orderData } });
+                }
+            })
                 .catch(error => {
                     setError(error);
                 });
@@ -43,12 +46,6 @@ function OrderSearch() {
             ...errorVal,
             error
         });
-    }
-
-    const searchOrder = (orderNo) => {
-        const queryString = ORDER_SEARCH_QUERY.replace("$ORDER_NO", orderNo);
-        const gqlQuery = gql(queryString);
-        return client.query({ query: gqlQuery });
     }
 
     const onChangeField = (e) => {
