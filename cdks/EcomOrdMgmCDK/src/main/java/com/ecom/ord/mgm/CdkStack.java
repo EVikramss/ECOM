@@ -27,8 +27,6 @@ import software.amazon.awscdk.services.appsync.GraphqlApi;
 import software.amazon.awscdk.services.appsync.LambdaDataSource;
 import software.amazon.awscdk.services.appsync.UserPoolConfig;
 import software.amazon.awscdk.services.appsync.UserPoolDefaultAction;
-import software.amazon.awscdk.services.certificatemanager.Certificate;
-import software.amazon.awscdk.services.certificatemanager.ICertificate;
 import software.amazon.awscdk.services.cognito.AuthFlow;
 import software.amazon.awscdk.services.cognito.CfnUserPoolClient;
 import software.amazon.awscdk.services.cognito.CognitoDomainOptions;
@@ -71,15 +69,10 @@ import software.amazon.awscdk.services.ecs.PortMapping;
 import software.amazon.awscdk.services.ecs.Secret;
 import software.amazon.awscdk.services.elasticloadbalancingv2.ApplicationListener;
 import software.amazon.awscdk.services.elasticloadbalancingv2.ApplicationLoadBalancer;
-import software.amazon.awscdk.services.elasticloadbalancingv2.ApplicationLoadBalancerAttributes;
 import software.amazon.awscdk.services.elasticloadbalancingv2.ApplicationProtocol;
 import software.amazon.awscdk.services.elasticloadbalancingv2.ApplicationTargetGroup;
 import software.amazon.awscdk.services.elasticloadbalancingv2.BaseApplicationListenerProps;
-import software.amazon.awscdk.services.elasticloadbalancingv2.IApplicationLoadBalancer;
-import software.amazon.awscdk.services.elasticloadbalancingv2.ListenerAction;
-import software.amazon.awscdk.services.elasticloadbalancingv2.ListenerCertificate;
 import software.amazon.awscdk.services.elasticloadbalancingv2.TargetType;
-import software.amazon.awscdk.services.elasticloadbalancingv2.actions.AuthenticateCognitoAction;
 import software.amazon.awscdk.services.iam.AnyPrincipal;
 import software.amazon.awscdk.services.iam.Effect;
 import software.amazon.awscdk.services.iam.IManagedPolicy;
@@ -380,10 +373,11 @@ public class CdkStack extends Stack {
 
 		Map<String, String> envVariables;
 		if ("CreateOrder".equals(jobName)) {
-			envVariables = Map.of("DBPRX_EP", dbCluster.getClusterEndpoint().getHostname(), "INVAVLURL", System.getenv("INVAVLURL"),
-					"CreateOrderQURL", createOrderQ.getQueueUrl());
+			envVariables = Map.of("DBPRX_EP", dbCluster.getClusterEndpoint().getHostname(), "INVAVLURL",
+					System.getenv("INVAVLURL"), "CreateOrderQURL", createOrderQ.getQueueUrl());
 		} else {
-			envVariables = Map.of("DBPRX_EP", dbCluster.getClusterEndpoint().getHostname(), "INVAVLURL", System.getenv("INVAVLURL"));
+			envVariables = Map.of("DBPRX_EP", dbCluster.getClusterEndpoint().getHostname(), "INVAVLURL",
+					System.getenv("INVAVLURL"));
 		}
 
 		// define container along with rds secret
@@ -432,8 +426,9 @@ public class CdkStack extends Stack {
 		// create vpc link
 		SecurityGroup vpcLinkSecurityGroup = new SecurityGroup(this, "LinkSecurityGroup",
 				SecurityGroupProps.builder().vpc(vpc).allowAllOutbound(false).build());
-		VpcLink vpcLink = VpcLink.Builder.create(this, "VpcLink").vpc(vpc).securityGroups(List.of(vpcLinkSecurityGroup))
-				.build();
+		VpcLink vpcLink = VpcLink.Builder.create(this, "VpcLink").vpc(vpc)
+				.subnets(SubnetSelection.builder().subnetType(SubnetType.PRIVATE_ISOLATED).build())
+				.securityGroups(List.of(vpcLinkSecurityGroup)).build();
 
 		// update SG permissions
 		albSecurityGroup.addIngressRule(vpcLinkSecurityGroup, Port.allTraffic());
@@ -454,40 +449,6 @@ public class CdkStack extends Stack {
 		ecsHTTPApi = HttpApi.Builder.create(this, "GetDataHttpApi").build();
 		ecsHTTPApi.addRoutes(AddRoutesOptions.builder().path("/getOrder").methods(List.of(HttpMethod.GET))
 				.authorizer(apiGatewayAuthorizer).integration(albIntegration).build());
-	}
-
-	private void configureALB() {
-		String userVPCIDStr = System.getenv("USERVPCID");
-		String albARNStr = System.getenv("ALBARN");
-		String albSGStr = System.getenv("ALBSG");
-		String albCertARNStr = System.getenv("ALBCERTARN");
-
-		IVpc userVPC = Vpc.fromLookup(this, userVPCIDStr, VpcLookupOptions.builder().vpcId(userVPCIDStr).build());
-		ISecurityGroup albSG = SecurityGroup.fromLookupById(this, albSGStr, albSGStr);
-
-		// add alb sg to task/service sg
-		asgsg.addIngressRule(albSG, Port.tcp(8080), "Allow ALB access to ecs services on port 8080");
-		albSG.addEgressRule(asgsg, Port.tcp(8080));
-
-		// get existing ALB from user vpc
-		IApplicationLoadBalancer alb = ApplicationLoadBalancer.fromApplicationLoadBalancerAttributes(this, stackName,
-				ApplicationLoadBalancerAttributes.builder().loadBalancerArn(albARNStr).vpc(userVPC)
-						.securityGroupId(albSGStr).build());
-
-		// point to getDataService
-		ApplicationTargetGroup targetGroup = ApplicationTargetGroup.Builder.create(this, "ALBTargetGroup").vpc(vpc)
-				.port(8080).protocol(ApplicationProtocol.HTTP).targetType(TargetType.IP)
-				.targets(List.of(getDataService)).build();
-
-		ICertificate existingCertificate = Certificate.fromCertificateArn(this, "CERT_ARN", albCertARNStr);
-		alb.addListener("HttpsListener",
-				BaseApplicationListenerProps.builder().port(444).protocol(ApplicationProtocol.HTTPS)
-						.certificates(List.of(ListenerCertificate.fromCertificateManager(existingCertificate)))
-						.defaultAction(AuthenticateCognitoAction.Builder.create().userPool(userPool)
-								.userPoolClient(userPoolClient).userPoolDomain(userPoolDomain)
-								.next(ListenerAction.forward(List.of(targetGroup))).build())
-						.build());
-
 	}
 
 	private void lookupNetwork() {
