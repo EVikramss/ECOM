@@ -426,7 +426,7 @@ public class CdkStack extends Stack {
 				BaseApplicationListenerProps.builder().port(80).defaultTargetGroups(List.of(targetGroup)).build());
 
 		List<ISubnet> subnetList = vpc.getIsolatedSubnets().stream()
-				.filter(s -> (s.getAvailabilityZone().equals("use1-az1") || s.getAvailabilityZone().equals("use1-az2")))
+				.filter(s -> (s.getAvailabilityZone().equals("us-east-1a") || s.getAvailabilityZone().equals("us-east-1b")))
 				.collect(Collectors.toList());
 
 		// create vpc link
