@@ -423,14 +423,18 @@ public class CdkStack extends Stack {
 		ApplicationListener listener = alb.addListener("GetDataListener",
 				BaseApplicationListenerProps.builder().port(80).defaultTargetGroups(List.of(targetGroup)).build());
 
-		// create vpc link
-		SecurityGroup vpcLinkSecurityGroup = new SecurityGroup(this, "LinkSecurityGroup",
-				SecurityGroupProps.builder().vpc(vpc).allowAllOutbound(false).build());
-		VpcLink vpcLink = VpcLink.Builder.create(this, "VpcLink").vpc(vpc)
-				.subnets(SubnetSelection.builder().subnetType(SubnetType.PRIVATE_ISOLATED)
-						 .availabilityZones(List.of("use1-az1", "use1-az2")).build())
-				.securityGroups(List.of(vpcLinkSecurityGroup)).build();
+		List<ISubnet> subnetList = vpc.getIsolatedSubnets().stream()
+        .filter(s -> (s.getAvailabilityZone().equals("use1-az1") || s.getAvailabilityZone().equals("use1-az2")))
+        .collect(Collectors.toList());
+ 
+    // create vpc link
+    SecurityGroup vpcLinkSecurityGroup = new SecurityGroup(this, "LinkSecurityGroup",
+        SecurityGroupProps.builder().vpc(vpc).allowAllOutbound(false).build());
+    VpcLink vpcLink = VpcLink.Builder.create(this, "VpcLink").vpc(vpc)
+        .subnets(SubnetSelection.builder().subnets(subnetList).build())
+        .securityGroups(List.of(vpcLinkSecurityGroup)).build();
 
+		
 		// update SG permissions
 		albSecurityGroup.addIngressRule(vpcLinkSecurityGroup, Port.allTraffic());
 		albSecurityGroup.addEgressRule(vpcLinkSecurityGroup, Port.allTraffic());
