@@ -427,7 +427,8 @@ public class CdkStack extends Stack {
 		SecurityGroup vpcLinkSecurityGroup = new SecurityGroup(this, "LinkSecurityGroup",
 				SecurityGroupProps.builder().vpc(vpc).allowAllOutbound(false).build());
 		VpcLink vpcLink = VpcLink.Builder.create(this, "VpcLink").vpc(vpc)
-				.subnets(SubnetSelection.builder().subnetType(SubnetType.PRIVATE_ISOLATED).build())
+				.subnets(SubnetSelection.builder().subnetType(SubnetType.PRIVATE_ISOLATED)
+						 .availabilityZones(List.of("us-east-1a", "us-east-1b")).build())
 				.securityGroups(List.of(vpcLinkSecurityGroup)).build();
 
 		// update SG permissions
