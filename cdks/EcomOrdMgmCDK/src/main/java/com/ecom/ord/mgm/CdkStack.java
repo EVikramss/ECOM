@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.stream.Collectors;
 
 import software.amazon.awscdk.CfnOutput;
 import software.amazon.awscdk.Duration;
@@ -40,6 +41,7 @@ import software.amazon.awscdk.services.cognito.UserPoolClient;
 import software.amazon.awscdk.services.cognito.UserPoolDomain;
 import software.amazon.awscdk.services.ec2.IInterfaceVpcEndpoint;
 import software.amazon.awscdk.services.ec2.ISecurityGroup;
+import software.amazon.awscdk.services.ec2.ISubnet;
 import software.amazon.awscdk.services.ec2.IVpc;
 import software.amazon.awscdk.services.ec2.InstanceClass;
 import software.amazon.awscdk.services.ec2.InstanceSize;
@@ -424,17 +426,16 @@ public class CdkStack extends Stack {
 				BaseApplicationListenerProps.builder().port(80).defaultTargetGroups(List.of(targetGroup)).build());
 
 		List<ISubnet> subnetList = vpc.getIsolatedSubnets().stream()
-        .filter(s -> (s.getAvailabilityZone().equals("use1-az1") || s.getAvailabilityZone().equals("use1-az2")))
-        .collect(Collectors.toList());
- 
-    // create vpc link
-    SecurityGroup vpcLinkSecurityGroup = new SecurityGroup(this, "LinkSecurityGroup",
-        SecurityGroupProps.builder().vpc(vpc).allowAllOutbound(false).build());
-    VpcLink vpcLink = VpcLink.Builder.create(this, "VpcLink").vpc(vpc)
-        .subnets(SubnetSelection.builder().subnets(subnetList).build())
-        .securityGroups(List.of(vpcLinkSecurityGroup)).build();
+				.filter(s -> (s.getAvailabilityZone().equals("use1-az1") || s.getAvailabilityZone().equals("use1-az2")))
+				.collect(Collectors.toList());
 
-		
+		// create vpc link
+		SecurityGroup vpcLinkSecurityGroup = new SecurityGroup(this, "LinkSecurityGroup",
+				SecurityGroupProps.builder().vpc(vpc).allowAllOutbound(false).build());
+		VpcLink vpcLink = VpcLink.Builder.create(this, "VpcLink").vpc(vpc)
+				.subnets(SubnetSelection.builder().subnets(subnetList).build())
+				.securityGroups(List.of(vpcLinkSecurityGroup)).build();
+
 		// update SG permissions
 		albSecurityGroup.addIngressRule(vpcLinkSecurityGroup, Port.allTraffic());
 		albSecurityGroup.addEgressRule(vpcLinkSecurityGroup, Port.allTraffic());
