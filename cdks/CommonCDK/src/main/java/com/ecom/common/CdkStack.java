@@ -182,6 +182,11 @@ public class CdkStack extends Stack {
 				.service(InterfaceVpcEndpointAwsService.CLOUDWATCH_LOGS).privateDnsEnabled(true)
 				.securityGroups(List.of(ecsepsg)).open(true)
 				.subnets(SubnetSelection.builder().subnets(subPrivateSubnets).build()).build();
+
+		InterfaceVpcEndpoint lambdaEndpoint = InterfaceVpcEndpoint.Builder.create(this, "ECSLambdaInterfaceEndpoint").vpc(vpc)
+				.service(InterfaceVpcEndpointAwsService.LAMBDA).privateDnsEnabled(true)
+				.securityGroups(List.of(ecsepsg)).open(true)
+				.subnets(SubnetSelection.builder().subnets(subPrivateSubnets).build()).build();
 	}
 
 	private void setupRunDDLLambda(String baseDir) {

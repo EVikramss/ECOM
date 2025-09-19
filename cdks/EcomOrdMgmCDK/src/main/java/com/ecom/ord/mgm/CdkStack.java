@@ -287,6 +287,11 @@ public class CdkStack extends Stack {
 			taskPolicies = List.of(ManagedPolicy.fromAwsManagedPolicyName("SecretsManagerReadWrite"),
 					ManagedPolicy.fromAwsManagedPolicyName("AmazonRDSDataFullAccess"),
 					ManagedPolicy.fromAwsManagedPolicyName("AmazonSQSFullAccess"));
+		} else if ("ScheduleOrder".equals(jobName)) {
+			taskPolicies = List.of(ManagedPolicy.fromAwsManagedPolicyName("SecretsManagerReadWrite"),
+					ManagedPolicy.fromAwsManagedPolicyName("AmazonRDSDataFullAccess"),
+					ManagedPolicy.fromAwsManagedPolicyName("AmazonSQSFullAccess"),
+					ManagedPolicy.fromAwsManagedPolicyName("AWSLambda_FullAccess"));
 		} else {
 			taskPolicies = List.of(ManagedPolicy.fromAwsManagedPolicyName("SecretsManagerReadWrite"),
 					ManagedPolicy.fromAwsManagedPolicyName("AmazonRDSDataFullAccess"));
@@ -305,11 +310,10 @@ public class CdkStack extends Stack {
 
 		Map<String, String> envVariables;
 		if ("CreateOrder".equals(jobName)) {
-			envVariables = Map.of("DBPRX_EP", dbCluster.getClusterEndpoint().getHostname(), "INVAVLURL",
-					System.getenv("INVAVLURL"), "CreateOrderQURL", createOrderQ.getQueueUrl());
+			envVariables = Map.of("DBPRX_EP", dbCluster.getClusterEndpoint().getHostname(), "CreateOrderQURL",
+					createOrderQ.getQueueUrl());
 		} else {
-			envVariables = Map.of("DBPRX_EP", dbCluster.getClusterEndpoint().getHostname(), "INVAVLURL",
-					System.getenv("INVAVLURL"));
+			envVariables = Map.of("DBPRX_EP", dbCluster.getClusterEndpoint().getHostname());
 		}
 
 		// define container along with rds secret
@@ -383,8 +387,7 @@ public class CdkStack extends Stack {
 
 		// Create HTTP API using albIntegration - allow cors
 		ecsHTTPApi = HttpApi.Builder.create(this, "GetDataHttpApi")
-				.corsPreflight(CorsPreflightOptions.builder().allowCredentials(false)
-						.allowOrigins(List.of("*"))
+				.corsPreflight(CorsPreflightOptions.builder().allowCredentials(false).allowOrigins(List.of("*"))
 						.allowMethods(List.of(CorsHttpMethod.GET, CorsHttpMethod.POST))
 						.allowHeaders(List.of("Content-Type", "origin", "accept", "Authorization"))
 						.maxAge(Duration.days(10)).build())

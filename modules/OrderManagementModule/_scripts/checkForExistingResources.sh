@@ -17,9 +17,6 @@ ECSASGSG=$(aws cloudformation describe-stacks --stack-name COMMON --query "Stack
 ECSNMSPARN=$(aws cloudformation describe-stacks --stack-name COMMON --query "Stacks[0].Outputs[?OutputKey=='ECSNMSPARN'].OutputValue" --output text)
 ECSNMSPID=$(aws cloudformation describe-stacks --stack-name COMMON --query "Stacks[0].Outputs[?OutputKey=='ECSNMSPID'].OutputValue" --output text)
 
-# inventory url
-INVAVLURL=$(aws cloudformation describe-stacks --stack-name ECOMINV --query "Stacks[0].Outputs[?OutputKey=='AvailabilityOpURL'].OutputValue" --output text)
-
 export VPCID
 export SMEPID
 export SMSGID
