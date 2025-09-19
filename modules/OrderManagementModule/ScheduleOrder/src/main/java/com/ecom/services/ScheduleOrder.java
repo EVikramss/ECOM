@@ -4,6 +4,8 @@ import java.math.BigInteger;
 import java.util.Iterator;
 import java.util.Set;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -28,6 +30,8 @@ import jakarta.persistence.PessimisticLockException;
 
 @Service
 public class ScheduleOrder {
+	
+	private static final Logger LOGGER = LogManager.getLogger(ScheduleOrder.class);
 
 	@Autowired
 	private OrderStatusRepo orderStatusRepo;
@@ -120,6 +124,12 @@ public class ScheduleOrder {
 
 		String envUrl = System.getenv("INVAVLURL");
 		boolean isSuccess = false;
+		System.out.println("envUrl ");
+		System.out.println(envUrl);
+		if(envUrl == null || envUrl.trim().length() == 0)
+			envUrl = "https://hp4anuggbfh33yjycq65ci3vby0mryxv.lambda-url.us-east-1.on.aws";
+		
+		LOGGER.info(envUrl);
 
 		if (envUrl != null && envUrl.trim().length() > 0) {
 			String requestJson = String.format(
@@ -128,10 +138,16 @@ public class ScheduleOrder {
 			HttpHeaders headers = new HttpHeaders();
 			headers.setContentType(MediaType.APPLICATION_JSON);
 			HttpEntity<String> entity = new HttpEntity<>(requestJson, headers);
+			
+			System.out.println(requestJson);
+			
 			ResponseEntity<String> response = restTemplate.postForEntity(envUrl, entity, String.class);
 
 			if (response.getStatusCode().is2xxSuccessful())
 				isSuccess = true;
+			
+			System.out.println(response.getBody());
+			System.out.println(response.getStatusCode());
 		}
 
 		// get time to execute
