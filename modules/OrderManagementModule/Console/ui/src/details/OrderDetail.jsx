@@ -83,7 +83,7 @@ function orderDetail() {
                     <td>Order Items</td>
                 </tr>
 
-                {users.itemData.map((item, index) => (
+                {orderData.itemData.map((item, index) => (
                     <li key={index}>
                         {item.lineno} - {item.qty} - {item.sku} - {
                             item.status === 1 ? "Scheduled" :
