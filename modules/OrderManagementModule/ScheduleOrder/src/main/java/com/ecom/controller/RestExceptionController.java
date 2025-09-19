@@ -8,26 +8,22 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 
 import com.ecom.exception.ServiceException;
 import com.ecom.services.ErrorService;
-import com.fasterxml.jackson.core.JsonProcessingException;
 
 @ControllerAdvice
-public class ExceptionController {
+public class RestExceptionController {
 
 	@Autowired
 	private ErrorService errorService;
 
 	@ExceptionHandler
 	public ResponseEntity<String> handleServiceException(ServiceException e) {
-		try {
-			errorService.persistData(e);
-		} catch (JsonProcessingException e1) {
-			e1.printStackTrace();
-		}
+		errorService.persistData(e);
 		return new ResponseEntity<String>(e.getExceptionMessage(), HttpStatusCode.valueOf(400));
 	}
 
 	@ExceptionHandler
 	public ResponseEntity<String> handleException(Exception e) {
+		errorService.persistData(e);
 		return new ResponseEntity<String>(e.getMessage(), HttpStatusCode.valueOf(400));
 	}
 }

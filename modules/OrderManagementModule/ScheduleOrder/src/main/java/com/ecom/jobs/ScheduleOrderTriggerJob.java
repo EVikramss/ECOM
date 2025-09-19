@@ -8,7 +8,8 @@ import org.quartz.JobExecutionException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import com.ecom.services.ScheduleService;
+import com.ecom.component.ScheduleComponent;
+
 
 @Component
 public class ScheduleOrderTriggerJob implements Job {
@@ -16,7 +17,7 @@ public class ScheduleOrderTriggerJob implements Job {
 	private static final Logger LOGGER = LogManager.getLogger(ScheduleOrderTriggerJob.class);
 
 	@Autowired
-	private ScheduleService service;
+	private ScheduleComponent service;
 
 	@Override
 	public void execute(JobExecutionContext context) throws JobExecutionException {

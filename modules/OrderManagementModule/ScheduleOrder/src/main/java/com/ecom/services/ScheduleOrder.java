@@ -101,7 +101,6 @@ public class ScheduleOrder {
 					itemData.setStatus(StatusEnum.CANCELLED.getStatus());
 				}
 			}
-			;
 		}
 
 		if (atLeastOneItemScheduled)
@@ -124,12 +123,7 @@ public class ScheduleOrder {
 
 		String envUrl = System.getenv("INVAVLURL");
 		boolean isSuccess = false;
-		System.out.println("envUrl ");
-		System.out.println(envUrl);
-		if(envUrl == null || envUrl.trim().length() == 0)
-			envUrl = "https://hp4anuggbfh33yjycq65ci3vby0mryxv.lambda-url.us-east-1.on.aws";
-		
-		LOGGER.info(envUrl);
+		LOGGER.debug(envUrl);
 
 		if (envUrl != null && envUrl.trim().length() > 0) {
 			String requestJson = String.format(
@@ -139,15 +133,15 @@ public class ScheduleOrder {
 			headers.setContentType(MediaType.APPLICATION_JSON);
 			HttpEntity<String> entity = new HttpEntity<>(requestJson, headers);
 			
-			System.out.println(requestJson);
+			LOGGER.debug(requestJson);
 			
 			ResponseEntity<String> response = restTemplate.postForEntity(envUrl, entity, String.class);
 
 			if (response.getStatusCode().is2xxSuccessful())
 				isSuccess = true;
-			
-			System.out.println(response.getBody());
-			System.out.println(response.getStatusCode());
+
+			LOGGER.debug(response.getStatusCode());
+			LOGGER.debug(response.getBody());
 		}
 
 		// get time to execute

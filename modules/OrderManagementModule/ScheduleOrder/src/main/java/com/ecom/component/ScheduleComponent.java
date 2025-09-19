@@ -1,4 +1,4 @@
-package com.ecom.services;
+package com.ecom.component;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -10,19 +10,22 @@ import java.util.stream.Collectors;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
 import com.ecom.common.StatusEnum;
 import com.ecom.entity.OrderStatus;
 import com.ecom.exception.ServiceException;
 import com.ecom.repo.OrderStatusRepo;
+import com.ecom.services.ErrorService;
+import com.ecom.services.ScheduleOrder;
+import com.ecom.services.StatisticsService;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 
-@Service
-public class ScheduleService {
-	private static final Logger LOGGER = LogManager.getLogger(ScheduleService.class);
+@Component
+public class ScheduleComponent {
+	private static final Logger LOGGER = LogManager.getLogger(ScheduleComponent.class);
 
 	@Autowired
 	private OrderStatusRepo orderStatusRepo;
@@ -35,6 +38,9 @@ public class ScheduleService {
 
 	@Autowired
 	private StatisticsService statService;
+
+	@Autowired
+	private ErrorService errorService;
 
 	private ExecutorService executorService = Executors.newFixedThreadPool(2);
 
@@ -58,6 +64,12 @@ public class ScheduleService {
 				r.get();
 			} catch (InterruptedException | ExecutionException e) {
 				e.printStackTrace();
+			} catch (ServiceException e) {
+				e.printStackTrace();
+				errorService.persistData(e);
+			} catch (Exception e) {
+				e.printStackTrace();
+				errorService.persistData(e);
 			}
 		});
 
@@ -77,7 +89,6 @@ public class ScheduleService {
 			scheduleOrder.executeOrder(w);
 		} catch (Exception e) {
 			LOGGER.error(e.getMessage());
-			e.printStackTrace();
 			throw new ServiceException(w, e.getMessage(), e.getStackTrace(), "ScheduleService.executeSingleWorkItem");
 		}
 		return w;
