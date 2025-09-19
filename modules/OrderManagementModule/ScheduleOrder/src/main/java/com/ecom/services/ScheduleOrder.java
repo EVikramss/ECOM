@@ -17,6 +17,10 @@ import com.ecom.entity.OrderItemData;
 import com.ecom.entity.OrderStatus;
 import com.ecom.repo.OrderDataRepo;
 import com.ecom.repo.OrderStatusRepo;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
@@ -102,7 +106,7 @@ public class ScheduleOrder {
 			}
 		}
 		lambdaClient.close();
-		
+
 		if (atLeastOneItemScheduled)
 			orderData.getOrderStatus().setStatus(StatusEnum.SCHEDULED.getStatus());
 		else
@@ -122,10 +126,13 @@ public class ScheduleOrder {
 	 * @param qty
 	 * @param demandId
 	 * @param node
-	 * @param lambdaClient 
+	 * @param lambdaClient
 	 * @return
+	 * @throws JsonProcessingException
+	 * @throws JsonMappingException
 	 */
-	private boolean reserveItem(String itemID, int qty, String demandId, String node, LambdaClient lambdaClient) {
+	private boolean reserveItem(String itemID, int qty, String demandId, String node, LambdaClient lambdaClient)
+			throws JsonMappingException, JsonProcessingException {
 		String functionName = "ScheduleOrder.reserveItem";
 
 		// record time
@@ -146,12 +153,16 @@ public class ScheduleOrder {
 
 		// extract response code and check if success
 		String responsePayload = response.payload().asUtf8String();
-		int statusCode = response.statusCode();
-		if(statusCode == 200)
-			isSuccess = true;
-		
-		LOGGER.debug(statusCode);
+		int lambdaResponseStatusCode = response.statusCode();
+		LOGGER.debug(lambdaResponseStatusCode);
 		LOGGER.debug(responsePayload);
+
+		ObjectMapper mapper = new ObjectMapper();
+		JsonNode rootNode = mapper.readTree(responsePayload);
+		int availabilityStatusCode = rootNode.get("statusCode").asInt();
+
+		if (lambdaResponseStatusCode == 200 && availabilityStatusCode == 200)
+			isSuccess = true;
 
 		// get time to execute
 		long durationNanos = sample.stop(meterRegistry.timer(functionName));
