@@ -3,7 +3,6 @@ import Router from './common/Router'
 import Header from './common/Header'
 import { useAuth } from "react-oidc-context";
 import { useEffect } from 'react';
-import Environment from './common/Context';
 
 function App() {
   const auth = useAuth();
@@ -22,10 +21,8 @@ function App() {
   if (auth.isAuthenticated) {
     return (
       <>
-        <Environment.Provider value={token}>
-          <Header />
-          <Router />
-        </Environment.Provider>
+        <Header />
+        <Router token={token} />
       </>
     )
   }

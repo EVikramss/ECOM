@@ -9,7 +9,7 @@ import axios from 'axios';
 import { getToken } from '../common/Context'
 import config from '../common/config.json';
 
-function OrderSearch() {
+function OrderSearch(props) {
     const [formData, setFormData] = useState({ orderNo: '' });
     const [errorVal, setErrorVal] = useState({ error: '' });
     const navigate = useNavigate();
@@ -19,8 +19,8 @@ function OrderSearch() {
         const orderNo = formData.orderNo;
         setError("");
 
-        const token = getToken();
         try {
+            const token = props.token;
             axios.get(config.apiURL + "/getOrder?orderNo=" + orderNo, {
                 headers: {
                     Authorization: token
