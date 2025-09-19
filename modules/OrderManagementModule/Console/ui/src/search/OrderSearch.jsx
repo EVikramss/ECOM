@@ -6,7 +6,6 @@ import './OrderSearch.css';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { getToken } from '../common/Context'
 import config from '../common/config.json';
 
 function OrderSearch(props) {
