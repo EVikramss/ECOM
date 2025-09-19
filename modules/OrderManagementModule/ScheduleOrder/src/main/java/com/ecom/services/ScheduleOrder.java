@@ -133,24 +133,25 @@ public class ScheduleOrder {
 
 		boolean isSuccess = false;
 
-		// Prepare payload
+		// form input for a single item
 		String requestJson = String.format(
 				"{\"OP\":\"ReserveAvailability\",\"ItemID\":\"%s\",\"Node\":\"%s\",\"Qty\":%s,\"Id\": \"%s\"}", itemID,
 				node, qty, demandId);
 		LOGGER.debug(requestJson);
 
-		// Create InvokeRequest
+		// Invoke Lambda
 		InvokeRequest request = InvokeRequest.builder().functionName("ECOMINVAvailabilityOp")
 				.payload(SdkBytes.fromUtf8String(requestJson)).build();
-
-		// Invoke Lambda
 		InvokeResponse response = lambdaClient.invoke(request);
 
-		// Print response
+		// extract response code and check if success
 		String responsePayload = response.payload().asUtf8String();
-		LOGGER.debug(response.statusCode());
+		int statusCode = response.statusCode();
+		if(statusCode == 200)
+			isSuccess = true;
+		
+		LOGGER.debug(statusCode);
 		LOGGER.debug(responsePayload);
-		System.out.println("Lambda response: " + responsePayload);
 
 		// get time to execute
 		long durationNanos = sample.stop(meterRegistry.timer(functionName));
