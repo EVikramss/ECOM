@@ -4,7 +4,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import java.util.stream.Collectors;
 
 import software.amazon.awscdk.CfnOutput;
 import software.amazon.awscdk.Duration;
@@ -15,19 +14,11 @@ import software.amazon.awscdk.aws_apigatewayv2_integrations.HttpAlbIntegration;
 import software.amazon.awscdk.services.amplify.CfnApp;
 import software.amazon.awscdk.services.amplify.CfnBranch;
 import software.amazon.awscdk.services.apigatewayv2.AddRoutesOptions;
+import software.amazon.awscdk.services.apigatewayv2.CorsHttpMethod;
+import software.amazon.awscdk.services.apigatewayv2.CorsPreflightOptions;
 import software.amazon.awscdk.services.apigatewayv2.HttpApi;
 import software.amazon.awscdk.services.apigatewayv2.HttpMethod;
 import software.amazon.awscdk.services.apigatewayv2.VpcLink;
-import software.amazon.awscdk.services.appsync.AuthorizationConfig;
-import software.amazon.awscdk.services.appsync.AuthorizationMode;
-import software.amazon.awscdk.services.appsync.AuthorizationType;
-import software.amazon.awscdk.services.appsync.BaseResolverProps;
-import software.amazon.awscdk.services.appsync.Definition;
-import software.amazon.awscdk.services.appsync.FunctionRuntime;
-import software.amazon.awscdk.services.appsync.GraphqlApi;
-import software.amazon.awscdk.services.appsync.LambdaDataSource;
-import software.amazon.awscdk.services.appsync.UserPoolConfig;
-import software.amazon.awscdk.services.appsync.UserPoolDefaultAction;
 import software.amazon.awscdk.services.cognito.AuthFlow;
 import software.amazon.awscdk.services.cognito.CfnUserPoolClient;
 import software.amazon.awscdk.services.cognito.CognitoDomainOptions;
@@ -75,15 +66,11 @@ import software.amazon.awscdk.services.elasticloadbalancingv2.ApplicationProtoco
 import software.amazon.awscdk.services.elasticloadbalancingv2.ApplicationTargetGroup;
 import software.amazon.awscdk.services.elasticloadbalancingv2.BaseApplicationListenerProps;
 import software.amazon.awscdk.services.elasticloadbalancingv2.TargetType;
-import software.amazon.awscdk.services.iam.AnyPrincipal;
-import software.amazon.awscdk.services.iam.Effect;
 import software.amazon.awscdk.services.iam.IManagedPolicy;
 import software.amazon.awscdk.services.iam.IRole;
 import software.amazon.awscdk.services.iam.ManagedPolicy;
-import software.amazon.awscdk.services.iam.PolicyStatement;
 import software.amazon.awscdk.services.iam.Role;
 import software.amazon.awscdk.services.iam.ServicePrincipal;
-import software.amazon.awscdk.services.lambda.Function;
 import software.amazon.awscdk.services.logs.LogGroup;
 import software.amazon.awscdk.services.logs.RetentionDays;
 import software.amazon.awscdk.services.rds.AuroraPostgresClusterEngineProps;
@@ -121,6 +108,7 @@ public class CdkStack extends Stack {
 	private ISecurityGroup smepsg;
 	private Role amplifyRole;
 	private ISecurityGroup asgsg;
+	private ISecurityGroup dbsg;
 
 	private UserPoolDomain userPoolDomain;
 	private UserPoolClient userPoolClient;
@@ -152,9 +140,9 @@ public class CdkStack extends Stack {
 		setupCognito();
 		createAuroraPostgresDB(dbreadRplCnt);
 		setupSQS();
+		setupOrderConsole(baseDir);
 		setupECSJobs();
 		exposeECSWithHttpApi();
-		setupOrderConsole(baseDir);
 
 		// record output variables
 		setupOutputVariables();
@@ -189,65 +177,6 @@ public class CdkStack extends Stack {
 		IBucket bucket = Bucket.fromBucketArn(this, bucketArn, bucketArn);
 		bucket.grantRead(amplifyRole);
 		// addBucketPolicyForAmplify(bucket, amplifyApp);
-	}
-
-	/**
-	 * Apart from IAM role, amplify access needs S3 bucket policy to be set as well
-	 * 
-	 * @param bucket
-	 * @param amplifyApp
-	 */
-	private void addBucketPolicyForAmplify(IBucket bucket, CfnApp amplifyApp) {
-
-		String amplifyAppArn = amplifyApp.getAttrArn();
-		String accountId = additionalProperties.getProperty("accountID");
-
-		PolicyStatement listBucketStatement = PolicyStatement.Builder.create().effect(Effect.ALLOW)
-				.principals(List.of(new ServicePrincipal("amplify.amazonaws.com"))).actions(List.of("s3:ListBucket"))
-				.resources(List.of(bucket.getBucketArn())).conditions(Map.of("StringEquals", Map.of("aws:SourceArn",
-						amplifyAppArn, "aws:SourceAccount", accountId, "s3:prefix", "ordmgm/ui/")))
-				.build();
-
-		PolicyStatement getObjectStatement = PolicyStatement.Builder.create().effect(Effect.ALLOW)
-				.principals(List.of(new ServicePrincipal("amplify.amazonaws.com"))).actions(List.of("s3:GetObject"))
-				.resources(List.of(bucket.getBucketArn() + "/ordmgm/ui/*"))
-				.conditions(
-						Map.of("StringEquals", Map.of("aws:SourceArn", amplifyAppArn, "aws:SourceAccount", accountId)))
-				.build();
-
-		PolicyStatement denyUnsecureTransport = PolicyStatement.Builder.create().effect(Effect.DENY)
-				.principals(List.of(new AnyPrincipal())).actions(List.of("s3:*"))
-				.resources(List.of(bucket.getBucketArn() + "/*"))
-				.conditions(Map.of("Bool", Map.of("aws:SecureTransport", "false"))).build();
-
-		// Attach policy to bucket
-		bucket.addToResourcePolicy(listBucketStatement);
-		bucket.addToResourcePolicy(getObjectStatement);
-		bucket.addToResourcePolicy(denyUnsecureTransport);
-	}
-
-	private GraphqlApi setupAppSync(Function appSyncDatasource, String baseDir) {
-
-		GraphqlApi api = GraphqlApi.Builder.create(this, "ordMgmAPI").name("ordMgmAPI")
-				.authorizationConfig(AuthorizationConfig.builder()
-						.defaultAuthorization(AuthorizationMode.builder().authorizationType(AuthorizationType.USER_POOL)
-								.userPoolConfig(UserPoolConfig.builder().userPool(userPool)
-										.defaultAction(UserPoolDefaultAction.ALLOW).build())
-								.build())
-						.build())
-				.definition(Definition.fromFile(baseDir + "/schemas/ordMgm")).build();
-
-		// setup lambda as datasource
-		LambdaDataSource lambdaDs = api.addLambdaDataSource("LambdaDataSource", appSyncDatasource);
-		createResolver("getOrder", baseDir + "/resolvers/resolver.js", "Query", lambdaDs);
-
-		return api;
-	}
-
-	private void createResolver(String fieldName, String codePath, String typeName, LambdaDataSource lambdaDs) {
-		lambdaDs.createResolver(fieldName + typeName + "Resolver",
-				BaseResolverProps.builder().runtime(FunctionRuntime.JS_1_0_0).typeName(typeName).fieldName(fieldName)
-						.code(software.amazon.awscdk.services.appsync.Code.fromAsset(codePath)).build());
 	}
 
 	private void setupCognito() {
@@ -289,8 +218,7 @@ public class CdkStack extends Stack {
 		IClusterInstance writer = ClusterInstance.provisioned("writer", instanceProps);
 
 		// create cluster
-		ISecurityGroup dbsg = new SecurityGroup(stack, "auroraSecurityGroup",
-				SecurityGroupProps.builder().vpc(vpc).build());
+		dbsg = new SecurityGroup(stack, "auroraSecurityGroup", SecurityGroupProps.builder().vpc(vpc).build());
 		dbCluster = DatabaseCluster.Builder.create(stack, "auroradb").engine(engine).parameterGroup(pg)
 				.clusterIdentifier("ecomordmgmdb").writer(writer).securityGroups(Arrays.asList(dbsg)).vpc(vpc)
 				.vpcSubnets(SubnetSelection.builder().subnetType(SubnetType.PRIVATE_ISOLATED).build())
@@ -331,9 +259,11 @@ public class CdkStack extends Stack {
 		// grant consume msg from q
 		createOrderQ.grantConsumeMessages(asgRole);
 
-		// add asg role to db proxy sg
+		// add asg role to db sg
 		smepsg.addIngressRule(asgsg, Port.HTTPS);
 		asgsg.addEgressRule(smepsg, Port.HTTPS);
+		dbsg.addIngressRule(asgsg, Port.POSTGRES);
+		asgsg.addEgressRule(dbsg, Port.POSTGRES);
 
 		String baseDir = "/home/ec2-user/deploymentWorkspace2/modules/OrderManagementModule/";
 		setupECSJob(baseDir, "CreateOrder", asgRole, asgsg, cluster, pdn);
@@ -425,15 +355,15 @@ public class CdkStack extends Stack {
 		ApplicationListener listener = alb.addListener("GetDataListener",
 				BaseApplicationListenerProps.builder().port(80).defaultTargetGroups(List.of(targetGroup)).build());
 
-		List<ISubnet> subnetList = vpc.getIsolatedSubnets().stream()
-				.filter(s -> (s.getAvailabilityZone().equals("us-east-1a") || s.getAvailabilityZone().equals("us-east-1b")))
-				.collect(Collectors.toList());
+		// select first 2 subnets
+		List<ISubnet> privateSubnets = vpc.getIsolatedSubnets();
+		List<ISubnet> subPrivateSubnets = List.of(privateSubnets.get(0), privateSubnets.get(1));
 
 		// create vpc link
 		SecurityGroup vpcLinkSecurityGroup = new SecurityGroup(this, "LinkSecurityGroup",
 				SecurityGroupProps.builder().vpc(vpc).allowAllOutbound(false).build());
 		VpcLink vpcLink = VpcLink.Builder.create(this, "VpcLink").vpc(vpc)
-				.subnets(SubnetSelection.builder().subnets(subnetList).build())
+				.subnets(SubnetSelection.builder().subnets(subPrivateSubnets).build())
 				.securityGroups(List.of(vpcLinkSecurityGroup)).build();
 
 		// update SG permissions
@@ -451,8 +381,14 @@ public class CdkStack extends Stack {
 				.create("ECSAPIAuthorizer", userPool).authorizerName("ECSAPIAuthorizer")
 				.userPoolClients(List.of(userPoolClient)).build();
 
-		// Create HTTP API using albIntegration
-		ecsHTTPApi = HttpApi.Builder.create(this, "GetDataHttpApi").build();
+		// Create HTTP API using albIntegration - allow cors
+		ecsHTTPApi = HttpApi.Builder.create(this, "GetDataHttpApi")
+				.corsPreflight(CorsPreflightOptions.builder().allowCredentials(false)
+						.allowOrigins(List.of(amplifyApp.getAttrDefaultDomain()))
+						.allowMethods(List.of(CorsHttpMethod.GET, CorsHttpMethod.POST))
+						.allowHeaders(List.of("Content-Type", "origin", "accept", "Authorization"))
+						.maxAge(Duration.days(10)).build())
+				.build();
 		ecsHTTPApi.addRoutes(AddRoutesOptions.builder().path("/getOrder").methods(List.of(HttpMethod.GET))
 				.authorizer(apiGatewayAuthorizer).integration(albIntegration).build());
 	}
@@ -484,5 +420,6 @@ public class CdkStack extends Stack {
 		CfnOutput.Builder.create(this, "ORDMGMCLIENTID").value(userPoolClient.getUserPoolClientId()).build();
 		CfnOutput.Builder.create(this, "AMPLIFYROLEARN").value(amplifyRole.getRoleArn()).build();
 		CfnOutput.Builder.create(this, "APIEP").value(ecsHTTPApi.getApiEndpoint()).build();
+		CfnOutput.Builder.create(this, "APIID").value(ecsHTTPApi.getApiId()).build();
 	}
 }
