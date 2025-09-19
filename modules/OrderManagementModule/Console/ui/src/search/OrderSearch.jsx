@@ -6,6 +6,7 @@ import './OrderSearch.css';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { getToken } from '../common/Context'
 import config from '../common/config.json';
 
 function OrderSearch(props) {
@@ -25,16 +26,19 @@ function OrderSearch(props) {
                     Authorization: token
                 }
             }).then(result => {
-                var orderData = result.data.getOrder;
+                var orderData = result.data;
                 if (orderData == null) {
-                    setError("Order not found");
+                    setError("Order no does not exist");
                 } else {
                     navigate('/orderDetail', { state: { data: orderData } });
                 }
-            })
-                .catch(error => {
+            }).catch(error => {
+                if(error.response && error.response.data) {
+                    setError(error.response.data);
+                } else {
                     setError(error);
-                });
+                }
+            });
         } catch (error) {
             setError(error);
         }
