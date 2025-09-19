@@ -384,7 +384,7 @@ public class CdkStack extends Stack {
 		// Create HTTP API using albIntegration - allow cors
 		ecsHTTPApi = HttpApi.Builder.create(this, "GetDataHttpApi")
 				.corsPreflight(CorsPreflightOptions.builder().allowCredentials(false)
-						.allowOrigins(List.of(amplifyApp.getAttrDefaultDomain()))
+						.allowOrigins(List.of("*"))
 						.allowMethods(List.of(CorsHttpMethod.GET, CorsHttpMethod.POST))
 						.allowHeaders(List.of("Content-Type", "origin", "accept", "Authorization"))
 						.maxAge(Duration.days(10)).build())
