@@ -26,7 +26,7 @@ sed -i "s#CLIENT_ID#${client_id}#g" src/common/config.json
 sed -i "s#REDIRECT_URL#${updated_callback_url}#g" src/common/config.json
 
 # create users
-aws cognito-idp admin-create-user --user-pool-id "$client_pool_id" --username admin --temporary-password "Password@123" --user-attributes Name=email,Value=test@test.com --message-action SUPPRESS
+aws cognito-idp admin-create-user --user-pool-id "$client_pool_id" --username consoleUser --temporary-password "Password@123" --user-attributes Name=email,Value=test@test.com --message-action SUPPRESS
 
 # build ui
 npm install
@@ -44,7 +44,13 @@ aws s3 cp ./dist/ "s3://$s3bucket/ordmgm/ui/" --recursive
 # deploy to amplify
 aws amplify start-deployment --app-id "$AMP_APP_ID" --branch-name main --source-url "s3://$s3bucket/ordmgm/ui/" --source-url-type BUCKET_PREFIX
 
+# update api gateway allowed origin to amplify url
+AMP_BRANCH_URL_ORIGIN_ACCESS="https://main.$AMP_DMN_NAME"
+ORIGIN_URL=$(echo "$AMP_BRANCH_URL_ORIGIN_ACCESS" | awk '{print tolower($0)}')
+HTTP_APP_ID=$(aws cloudformation describe-stacks --stack-name ECOMORDMGM --query "Stacks[0].Outputs[?OutputKey=='APIID'].OutputValue" --output text)
+aws apigatewayv2 update-api --api-id "${HTTP_APP_ID}" --cors-configuration "{\"AllowOrigins\":[\"${ORIGIN_URL}\"]}"
+
 echo "Console login"
 echo "$AMP_BRANCH_URL"
-echo "username: admin"
+echo "username: consoleUser"
 echo "password: Password@123"
