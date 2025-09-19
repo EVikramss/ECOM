@@ -7,13 +7,8 @@ import java.util.Set;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestTemplate;
 
 import com.ecom.common.EntityNode;
 import com.ecom.common.StatusEnum;
@@ -27,10 +22,14 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import jakarta.persistence.LockTimeoutException;
 import jakarta.persistence.PessimisticLockException;
+import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.services.lambda.LambdaClient;
+import software.amazon.awssdk.services.lambda.model.InvokeRequest;
+import software.amazon.awssdk.services.lambda.model.InvokeResponse;
 
 @Service
 public class ScheduleOrder {
-	
+
 	private static final Logger LOGGER = LogManager.getLogger(ScheduleOrder.class);
 
 	@Autowired
@@ -38,9 +37,6 @@ public class ScheduleOrder {
 
 	@Autowired
 	private OrderDataRepo orderDataRepo;
-
-	@Autowired
-	private RestTemplate restTemplate;
 
 	@Autowired
 	private MeterRegistry meterRegistry;
@@ -83,6 +79,9 @@ public class ScheduleOrder {
 		Set<OrderItemData> itemDataList = orderData.getItemData();
 		String entityNode = EntityNode.valueOf(entity).getNode();
 
+		// Create Lambda client
+		LambdaClient lambdaClient = LambdaClient.create();
+
 		boolean atLeastOneItemScheduled = false;
 		if (entityNode != null && entityNode.trim().length() > 0) {
 			Iterator<OrderItemData> iter = itemDataList.iterator();
@@ -93,7 +92,7 @@ public class ScheduleOrder {
 				String demandId = orderNo;
 				String node = entityNode;
 
-				boolean isSuccess = reserveItem(itemID, qty, demandId, node);
+				boolean isSuccess = reserveItem(itemID, qty, demandId, node, lambdaClient);
 				if (isSuccess) {
 					atLeastOneItemScheduled = true;
 					itemData.setStatus(StatusEnum.SCHEDULED.getStatus());
@@ -102,7 +101,8 @@ public class ScheduleOrder {
 				}
 			}
 		}
-
+		lambdaClient.close();
+		
 		if (atLeastOneItemScheduled)
 			orderData.getOrderStatus().setStatus(StatusEnum.SCHEDULED.getStatus());
 		else
@@ -115,34 +115,42 @@ public class ScheduleOrder {
 		statService.logStat(functionName, durationMillis);
 	}
 
-	private boolean reserveItem(String itemID, int qty, String demandId, String node) {
+	/**
+	 * Invoke Lambda function to reserve for single item
+	 * 
+	 * @param itemID
+	 * @param qty
+	 * @param demandId
+	 * @param node
+	 * @param lambdaClient 
+	 * @return
+	 */
+	private boolean reserveItem(String itemID, int qty, String demandId, String node, LambdaClient lambdaClient) {
 		String functionName = "ScheduleOrder.reserveItem";
 
 		// record time
 		Timer.Sample sample = Timer.start(meterRegistry);
 
-		String envUrl = System.getenv("INVAVLURL");
 		boolean isSuccess = false;
-		LOGGER.debug(envUrl);
 
-		if (envUrl != null && envUrl.trim().length() > 0) {
-			String requestJson = String.format(
-					"{\"OP\":\"ReserveAvailability\",\"ItemID\":\"%s\",\"Node\":\"%s\",\"Qty\":%s,\"Id\": \"%s\"}",
-					itemID, node, qty, demandId);
-			HttpHeaders headers = new HttpHeaders();
-			headers.setContentType(MediaType.APPLICATION_JSON);
-			HttpEntity<String> entity = new HttpEntity<>(requestJson, headers);
-			
-			LOGGER.debug(requestJson);
-			
-			ResponseEntity<String> response = restTemplate.postForEntity(envUrl, entity, String.class);
+		// Prepare payload
+		String requestJson = String.format(
+				"{\"OP\":\"ReserveAvailability\",\"ItemID\":\"%s\",\"Node\":\"%s\",\"Qty\":%s,\"Id\": \"%s\"}", itemID,
+				node, qty, demandId);
+		LOGGER.debug(requestJson);
 
-			if (response.getStatusCode().is2xxSuccessful())
-				isSuccess = true;
+		// Create InvokeRequest
+		InvokeRequest request = InvokeRequest.builder().functionName("ECOMINVAvailabilityOp")
+				.payload(SdkBytes.fromUtf8String(requestJson)).build();
 
-			LOGGER.debug(response.getStatusCode());
-			LOGGER.debug(response.getBody());
-		}
+		// Invoke Lambda
+		InvokeResponse response = lambdaClient.invoke(request);
+
+		// Print response
+		String responsePayload = response.payload().asUtf8String();
+		LOGGER.debug(response.statusCode());
+		LOGGER.debug(responsePayload);
+		System.out.println("Lambda response: " + responsePayload);
 
 		// get time to execute
 		long durationNanos = sample.stop(meterRegistry.timer(functionName));

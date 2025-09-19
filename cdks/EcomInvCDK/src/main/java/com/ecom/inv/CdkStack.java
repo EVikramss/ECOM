@@ -92,8 +92,8 @@ public class CdkStack extends Stack {
 
 	private void checkAndSetupLambdaBackedAPIs() {
 		String baseDir = "/home/ec2-user/deploymentWorkspace/modules/InventoryModule/";
-		setupLambdaBackedAPI("AvailabilityOp", baseDir, false, true);
-		setupLambdaBackedAPI("SupplyDemandOp", baseDir, false, true);
+		setupLambdaBackedAPI("AvailabilityOp", baseDir, false, false);
+		setupLambdaBackedAPI("SupplyDemandOp", baseDir, false, false);
 	}
 
 	private void setupLambda(String lambdaName, String baseDir) {
