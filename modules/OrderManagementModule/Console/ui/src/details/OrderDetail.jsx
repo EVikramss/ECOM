@@ -8,11 +8,11 @@ function orderDetail() {
 
     const statusNum = orderData.orderStatus.status;
     var statusDesc = "Created";
-    if(statusNum == 1) {
+    if (statusNum == 1) {
         statusDesc = "Scheduled";
-    } else if(statusNum == 2) {
+    } else if (statusNum == 2) {
         statusDesc = "Shipped";
-    } else if(statusNum == 3) {
+    } else if (statusNum == 3) {
         statusDesc = "Cancelled";
     }
 
@@ -50,9 +50,9 @@ function orderDetail() {
                 <tr>
                     <td><p>{orderData.customerContact.email}</p></td>
                 </tr>
-                
+
                 <tr></tr>
-                
+
                 <tr>
                     <td>Shipping Address</td>
                 </tr>
@@ -76,10 +76,24 @@ function orderDetail() {
                     <td>Country</td>
                     <td><p>{orderData.address.country}</p></td>
                 </tr>
-                
+
                 <tr></tr>
-                
-                
+
+                <tr>
+                    <td>Order Items</td>
+                </tr>
+
+                {users.itemData.map((item, index) => (
+                    <li key={index}>
+                        {item.lineno} - {item.qty} - {item.sku} - {
+                            item.status === 1 ? "Scheduled" :
+                                item.status === 2 ? "Shipped" :
+                                    item.status === 3 ? "Cancelled" :
+                                        "Created"
+                        }
+                    </li>
+                ))}
+
             </table>
         </div>
     )
