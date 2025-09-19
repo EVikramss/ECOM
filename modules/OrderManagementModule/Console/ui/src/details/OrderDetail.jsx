@@ -6,12 +6,26 @@ function orderDetail() {
     const { state } = useLocation();
     const orderData = state.data;
 
+    const statusNum = orderData.orderStatus.status;
+    var statusDesc = "Created";
+    if(statusNum == 1) {
+        statusDesc = "Scheduled";
+    } else if(statusNum == 2) {
+        statusDesc = "Shipped";
+    } else if(statusNum == 3) {
+        statusDesc = "Cancelled";
+    }
+
     return (
         <div className="orderDetail">
             <table>
                 <tr>
                     <td>OrderNo</td>
-                    <td><p>{orderData.OrderNo}</p></td>
+                    <td><p>{orderData.orderNo}</p></td>
+                </tr>
+                <tr>
+                    <td>Status</td>
+                    <td><p>{statusDesc}</p></td>
                 </tr>
                 <tr>
                     <td>OrderDate</td>
