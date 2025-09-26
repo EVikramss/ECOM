@@ -62,9 +62,11 @@ import software.amazon.awscdk.services.ecs.PortMapping;
 import software.amazon.awscdk.services.ecs.Secret;
 import software.amazon.awscdk.services.elasticloadbalancingv2.ApplicationListener;
 import software.amazon.awscdk.services.elasticloadbalancingv2.ApplicationLoadBalancer;
+import software.amazon.awscdk.services.elasticloadbalancingv2.ApplicationLoadBalancerAttributes;
 import software.amazon.awscdk.services.elasticloadbalancingv2.ApplicationProtocol;
 import software.amazon.awscdk.services.elasticloadbalancingv2.ApplicationTargetGroup;
 import software.amazon.awscdk.services.elasticloadbalancingv2.BaseApplicationListenerProps;
+import software.amazon.awscdk.services.elasticloadbalancingv2.IApplicationLoadBalancer;
 import software.amazon.awscdk.services.elasticloadbalancingv2.TargetType;
 import software.amazon.awscdk.services.iam.IManagedPolicy;
 import software.amazon.awscdk.services.iam.IRole;
@@ -105,6 +107,7 @@ public class CdkStack extends Stack {
 	private DatabaseCluster dbCluster;
 
 	private ISecret dbSecret;
+	private ISecret invdbSecret;
 	private ISecurityGroup smepsg;
 	private Role amplifyRole;
 	private ISecurityGroup asgsg;
@@ -136,6 +139,7 @@ public class CdkStack extends Stack {
 
 		lookupNetwork();
 		lookupEndpoints();
+		lookupSecrets();
 
 		setupCognito();
 		createAuroraPostgresDB(dbreadRplCnt);
@@ -265,6 +269,18 @@ public class CdkStack extends Stack {
 		dbsg.addIngressRule(asgsg, Port.POSTGRES);
 		asgsg.addEgressRule(dbsg, Port.POSTGRES);
 
+		// add access to inv db if available
+		String invdbsgStr = System.getenv("INVDBSG");
+		if (invdbsgStr != null && invdbsgStr.trim().length() > 0) {
+			try {
+				ISecurityGroup invdbsg = SecurityGroup.fromLookupById(this, "ECSASGSG", invdbsgStr);
+				invdbsg.addIngressRule(asgsg, Port.POSTGRES);
+				asgsg.addEgressRule(invdbsg, Port.POSTGRES);
+			} catch (Exception e) {
+
+			}
+		}
+
 		String baseDir = "/home/ec2-user/deploymentWorkspace2/modules/OrderManagementModule/";
 		setupECSJob(baseDir, "CreateOrder", asgRole, asgsg, cluster, pdn);
 		setupECSJob(baseDir, "ScheduleOrder", asgRole, asgsg, cluster, pdn);
@@ -308,12 +324,24 @@ public class CdkStack extends Stack {
 				.retention(RetentionDays.ONE_DAY).build();
 		logGroup.grantWrite(asgRole);
 
+		Map<String, Secret> secrets;
 		Map<String, String> envVariables;
 		if ("CreateOrder".equals(jobName)) {
 			envVariables = Map.of("DBPRX_EP", dbCluster.getClusterEndpoint().getHostname(), "CreateOrderQURL",
 					createOrderQ.getQueueUrl());
+			secrets = Map.of("SECRET", Secret.fromSecretsManager(dbSecret));
+		} else if ("GetData".equals(jobName)) {
+			envVariables = Map.of("DBPRX_EP", dbCluster.getClusterEndpoint().getHostname(), "INVDB_EP",
+					System.getenv("INVDBEP"));
+			if (invdbSecret != null) {
+				secrets = Map.of("SECRET", Secret.fromSecretsManager(dbSecret), "INVDBSECRET",
+						Secret.fromSecretsManager(invdbSecret));
+			} else {
+				secrets = Map.of("SECRET", Secret.fromSecretsManager(dbSecret));
+			}
 		} else {
 			envVariables = Map.of("DBPRX_EP", dbCluster.getClusterEndpoint().getHostname());
+			secrets = Map.of("SECRET", Secret.fromSecretsManager(dbSecret));
 		}
 
 		// define container along with rds secret
@@ -324,7 +352,7 @@ public class CdkStack extends Stack {
 				.cpu(Integer.parseInt(System.getenv(jobName + "CPU")))
 				.portMappings(List.of(PortMapping.builder().containerPort(8080).build()))
 				.logging(LogDriver.awsLogs(AwsLogDriverProps.builder().logGroup(logGroup).streamPrefix("ecom").build()))
-				.secrets(Map.of("SECRET", Secret.fromSecretsManager(dbSecret))).environment(envVariables).build());
+				.secrets(secrets).environment(envVariables).build());
 
 		// create service for task - use same sg as asg
 		// expose service with cloud map and dns A records
@@ -342,13 +370,14 @@ public class CdkStack extends Stack {
 	}
 
 	private void exposeECSWithHttpApi() {
-		// create alb with sg
-		SecurityGroup albSecurityGroup = new SecurityGroup(this, "ECSALBSecurityGroup",
-				SecurityGroupProps.builder().vpc(vpc).allowAllOutbound(false).build());
+		// fetch alb created in common stack
+		String albARNStr = System.getenv("ALBARN");
+		String albSGStr = System.getenv("ALBSG");
 
-		ApplicationLoadBalancer alb = ApplicationLoadBalancer.Builder.create(this, "ECSALB").vpc(vpc)
-				.vpcSubnets(SubnetSelection.builder().subnetType(SubnetType.PRIVATE_ISOLATED).build())
-				.securityGroup(albSecurityGroup).internetFacing(false).build();
+		ISecurityGroup albSecurityGroup = SecurityGroup.fromLookupById(this, albSGStr, albSGStr);
+		IApplicationLoadBalancer alb = ApplicationLoadBalancer.fromApplicationLoadBalancerAttributes(this, stackName,
+				ApplicationLoadBalancerAttributes.builder().loadBalancerArn(albARNStr).vpc(vpc)
+						.securityGroupId(albSGStr).build());
 
 		// point to getDataService
 		ApplicationTargetGroup targetGroup = ApplicationTargetGroup.Builder.create(this, "ALBTargetGroup").vpc(vpc)
@@ -409,6 +438,14 @@ public class CdkStack extends Stack {
 
 		String secretsManagerEndpointSGID = System.getenv("SMSGID");
 		smepsg = SecurityGroup.fromLookupById(this, "secretsManagerEPSG", secretsManagerEndpointSGID);
+	}
+
+	private void lookupSecrets() {
+		String invdbsecarnStr = System.getenv("INVDBSECARN");
+		if (invdbsecarnStr != null && invdbsecarnStr.trim().length() > 0) {
+			invdbSecret = software.amazon.awscdk.services.secretsmanager.Secret.fromSecretCompleteArn(this,
+					"INVDBSECARN", invdbsecarnStr);
+		}
 	}
 
 	/**

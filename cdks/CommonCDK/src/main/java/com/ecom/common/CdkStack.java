@@ -8,12 +8,8 @@ import software.amazon.awscdk.CfnOutput;
 import software.amazon.awscdk.Stack;
 import software.amazon.awscdk.StackProps;
 import software.amazon.awscdk.services.autoscaling.AutoScalingGroup;
-import software.amazon.awscdk.services.ec2.AclCidr;
-import software.amazon.awscdk.services.ec2.AclTraffic;
-import software.amazon.awscdk.services.ec2.Action;
 import software.amazon.awscdk.services.ec2.CfnRoute;
 import software.amazon.awscdk.services.ec2.CfnVPCPeeringConnection;
-import software.amazon.awscdk.services.ec2.CommonNetworkAclEntryOptions;
 import software.amazon.awscdk.services.ec2.GatewayVpcEndpoint;
 import software.amazon.awscdk.services.ec2.GatewayVpcEndpointAwsService;
 import software.amazon.awscdk.services.ec2.ISecurityGroup;
@@ -25,14 +21,12 @@ import software.amazon.awscdk.services.ec2.InstanceType;
 import software.amazon.awscdk.services.ec2.InterfaceVpcEndpoint;
 import software.amazon.awscdk.services.ec2.InterfaceVpcEndpointAwsService;
 import software.amazon.awscdk.services.ec2.IpAddresses;
-import software.amazon.awscdk.services.ec2.NetworkAcl;
 import software.amazon.awscdk.services.ec2.Port;
 import software.amazon.awscdk.services.ec2.SecurityGroup;
 import software.amazon.awscdk.services.ec2.SecurityGroupProps;
 import software.amazon.awscdk.services.ec2.SubnetConfiguration;
 import software.amazon.awscdk.services.ec2.SubnetSelection;
 import software.amazon.awscdk.services.ec2.SubnetType;
-import software.amazon.awscdk.services.ec2.TrafficDirection;
 import software.amazon.awscdk.services.ec2.Vpc;
 import software.amazon.awscdk.services.ec2.VpcLookupOptions;
 import software.amazon.awscdk.services.ecr.Repository;
@@ -40,6 +34,7 @@ import software.amazon.awscdk.services.ecs.AsgCapacityProvider;
 import software.amazon.awscdk.services.ecs.CapacityProviderStrategy;
 import software.amazon.awscdk.services.ecs.Cluster;
 import software.amazon.awscdk.services.ecs.EcsOptimizedImage;
+import software.amazon.awscdk.services.elasticloadbalancingv2.ApplicationLoadBalancer;
 import software.amazon.awscdk.services.iam.Effect;
 import software.amazon.awscdk.services.iam.ManagedPolicy;
 import software.amazon.awscdk.services.iam.PolicyStatement;
@@ -80,6 +75,9 @@ public class CdkStack extends Stack {
 	private AutoScalingGroup asg;
 	private PrivateDnsNamespace namespace;
 
+	private SecurityGroup albSecurityGroup;
+	private ApplicationLoadBalancer alb;
+
 	public CdkStack(final Construct scope, final String id, final StackProps props, Properties additionalProperties) {
 		super(scope, id, props);
 		stack = this;
@@ -90,8 +88,19 @@ public class CdkStack extends Stack {
 		setupS3();
 		setupRunDDLLambda("/home/cloudshell-user/ECOM/modules/CommonModule/");
 		setupECSCluster();
+		setupVPCALB();
 
 		setupOutputVariables();
+	}
+
+	private void setupVPCALB() {
+		// create alb with sg
+		albSecurityGroup = new SecurityGroup(this, "ECSALBSecurityGroup",
+				SecurityGroupProps.builder().vpc(vpc).allowAllOutbound(false).build());
+
+		alb = ApplicationLoadBalancer.Builder.create(this, "ECSALB").vpc(vpc)
+				.vpcSubnets(SubnetSelection.builder().subnetType(SubnetType.PRIVATE_ISOLATED).build())
+				.securityGroup(albSecurityGroup).internetFacing(false).build();
 	}
 
 	private void setupECSCluster() {
@@ -183,8 +192,8 @@ public class CdkStack extends Stack {
 				.securityGroups(List.of(ecsepsg)).open(true)
 				.subnets(SubnetSelection.builder().subnets(subPrivateSubnets).build()).build();
 
-		InterfaceVpcEndpoint lambdaEndpoint = InterfaceVpcEndpoint.Builder.create(this, "ECSLambdaInterfaceEndpoint").vpc(vpc)
-				.service(InterfaceVpcEndpointAwsService.LAMBDA).privateDnsEnabled(true)
+		InterfaceVpcEndpoint lambdaEndpoint = InterfaceVpcEndpoint.Builder.create(this, "ECSLambdaInterfaceEndpoint")
+				.vpc(vpc).service(InterfaceVpcEndpointAwsService.LAMBDA).privateDnsEnabled(true)
 				.securityGroups(List.of(ecsepsg)).open(true)
 				.subnets(SubnetSelection.builder().subnets(subPrivateSubnets).build()).build();
 	}
@@ -305,5 +314,7 @@ public class CdkStack extends Stack {
 		CfnOutput.Builder.create(this, "ECSASGSG").value(asgsg.getSecurityGroupId()).build();
 		CfnOutput.Builder.create(this, "ECSNMSPARN").value(namespace.getNamespaceArn()).build();
 		CfnOutput.Builder.create(this, "ECSNMSPID").value(namespace.getNamespaceId()).build();
+		CfnOutput.Builder.create(this, "ALBARN").value(alb.getLoadBalancerArn()).build();
+		CfnOutput.Builder.create(this, "ALBSG").value(albSecurityGroup.getSecurityGroupId()).build();
 	}
 }

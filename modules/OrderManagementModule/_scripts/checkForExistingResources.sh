@@ -16,6 +16,11 @@ ECSASGROLE=$(aws cloudformation describe-stacks --stack-name COMMON --query "Sta
 ECSASGSG=$(aws cloudformation describe-stacks --stack-name COMMON --query "Stacks[0].Outputs[?OutputKey=='ECSASGSG'].OutputValue" --output text)
 ECSNMSPARN=$(aws cloudformation describe-stacks --stack-name COMMON --query "Stacks[0].Outputs[?OutputKey=='ECSNMSPARN'].OutputValue" --output text)
 ECSNMSPID=$(aws cloudformation describe-stacks --stack-name COMMON --query "Stacks[0].Outputs[?OutputKey=='ECSNMSPID'].OutputValue" --output text)
+ALBARN=$(aws cloudformation describe-stacks --stack-name COMMON --query "Stacks[0].Outputs[?OutputKey=='ALBARN'].OutputValue" --output text)
+ALBSG=$(aws cloudformation describe-stacks --stack-name COMMON --query "Stacks[0].Outputs[?OutputKey=='ALBSG'].OutputValue" --output text)
+INVDBSG=$(aws cloudformation describe-stacks --stack-name ECOMINV --query "Stacks[0].Outputs[?OutputKey=='DBPRXYSGID'].OutputValue" --output text)
+INVDBEP=$(aws cloudformation describe-stacks --stack-name ECOMINV --query "Stacks[0].Outputs[?OutputKey=='DBPRXYEP'].OutputValue" --output text)
+INVDBSECARN=$(aws cloudformation describe-stacks --stack-name ECOMINV --query "Stacks[0].Outputs[?OutputKey=='DBSECARN'].OutputValue" --output text)
 
 export VPCID
 export SMEPID
@@ -33,3 +38,8 @@ export INVAVLURL
 export ECSASGSG
 export ECSNMSPARN
 export ECSNMSPID
+export ALBARN
+export ALBSG
+export INVDBSG
+export INVDBEP
+export INVDBSECARN

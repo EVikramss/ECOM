@@ -127,6 +127,8 @@ public class CdkApp {
 		checkEnvVariableNotEmpty("ECSASGSG");
 		checkEnvVariableNotEmpty("ECSNMSPARN");
 		checkEnvVariableNotEmpty("ECSNMSPID");
+		checkEnvVariableNotEmpty("ALBARN");
+		checkEnvVariableNotEmpty("ALBSG");
 	}
 
 	private static void checkEnvVariableWithDefaults(String variableName, Integer defaultVariableValue) {
