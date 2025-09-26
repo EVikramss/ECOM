@@ -166,7 +166,7 @@ function orderList(props) {
 							</td>
 							<td>{order.entity}</td>
 							<td>{convertDateField(order.orderDate)}</td>
-							<td>{getStatusDescFromStatus(order.status)}</td>
+							<td>{getStatusDescFromStatus(order.orderStatus.status)}</td>
 						</tr>
 					))}
 				</tbody>
