@@ -10,6 +10,9 @@ import software.amazon.awscdk.StackProps;
 import software.amazon.awscdk.services.autoscaling.AutoScalingGroup;
 import software.amazon.awscdk.services.ec2.CfnRoute;
 import software.amazon.awscdk.services.ec2.CfnVPCPeeringConnection;
+import software.amazon.awscdk.services.ec2.FlowLog;
+import software.amazon.awscdk.services.ec2.FlowLogDestination;
+import software.amazon.awscdk.services.ec2.FlowLogResourceType;
 import software.amazon.awscdk.services.ec2.GatewayVpcEndpoint;
 import software.amazon.awscdk.services.ec2.GatewayVpcEndpointAwsService;
 import software.amazon.awscdk.services.ec2.ISecurityGroup;
@@ -242,6 +245,9 @@ public class CdkStack extends Stack {
 				.subnets(SubnetSelection.builder().subnets(subPrivateSubnets).build()).build();
 	}
 
+	/**
+	 * Setup vpc with flow logs to s3 bucket
+	 */
 	private void setupNetworking() {
 
 		// fetch ECOM vpc if already existing, otherwise create it
@@ -249,7 +255,12 @@ public class CdkStack extends Stack {
 				.subnetConfiguration(Arrays.asList(SubnetConfiguration.builder().cidrMask(24).name("PrivateSubnet")
 						.subnetType(SubnetType.PRIVATE_ISOLATED).build()))
 				.ipAddresses(IpAddresses.cidr(ecomVPCCIDR)).maxAzs(99) // Use all AZ's
-				.enableDnsHostnames(true).enableDnsSupport(true).natGateways(0).build();
+				.enableDnsHostnames(true).enableDnsSupport(true).natGateways(0).flowLogs(null).build();
+
+		Bucket vpcflowLogsBucket = Bucket.Builder.create(this, "ECOMVPCFlowLogsBucket").build();
+		FlowLog.Builder.create(this, "ECOMVPCFlowLogs").flowLogName("ECOMVPCFlowLogs")
+				.resourceType(FlowLogResourceType.fromVpc(vpc)).destination(FlowLogDestination.toS3(vpcflowLogsBucket))
+				.build();
 
 		/*
 		 * NetworkAcl ecomVPCNACL = NetworkAcl.Builder.create(this,
