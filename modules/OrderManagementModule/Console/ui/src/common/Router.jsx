@@ -18,13 +18,13 @@ function Router(props) {
 			<Route element={<ErrorPage />} />
 			
 			// search pages
-            <Route path="/orderSearch" element={<OrderSearch />} />
-			<Route path="/errorSearch" element={<ErrorSearch />} />
-			<Route path="/statsSearch" element={<StatsSearch />} />
+            <Route path="/orderSearch" element={<OrderSearch token={props.token} />} />
+			<Route path="/errorSearch" element={<ErrorSearch  token={props.token} />} />
+			<Route path="/statsSearch" element={<StatsSearch token={props.token} />} />
 			
 			// detail pages
-            <Route path="/orderDetail" element={<OrderDetail />} />
-			<Route path="/errorDetail" element={<ErrorDetail />} />
+            <Route path="/orderDetail" element={<OrderDetail token={props.token} />} />
+			<Route path="/errorDetail" element={<ErrorDetail token={props.token} />} />
 			
 			// list pages
 			<Route path="/orderList" element={<OrderList token={props.token}/>} />
