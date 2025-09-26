@@ -13,10 +13,13 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import com.ecom.common.Util;
+import com.ecom.dto.search.StatsSearch;
 import com.ecom.entity.ServiceStatistic;
 import com.ecom.repo.ServiceStatisticsRepo;
 
@@ -30,7 +33,7 @@ public class StatisticsService {
 
 	@Value("${spring.application.name}")
 	private String serviceName;
-	
+
 	@Autowired
 	private ServiceStatisticsRepo serviceStatisticsRepo;
 
@@ -71,7 +74,7 @@ public class StatisticsService {
 				serviceStatistic.setMin(min);
 				serviceStatistic.setCount(count);
 				serviceStatistic.setStatsKey(Util.generateKey());
-				
+
 				serviceStatisticsRepo.save(serviceStatistic);
 			}
 		}
@@ -86,5 +89,15 @@ public class StatisticsService {
 		while (copyInProgress) {
 		}
 		statsMap.computeIfAbsent(serviceName, s -> new ArrayList<Long>()).add(durationMillis);
+	}
+
+	public List<String> getServiceNames() {
+		return serviceStatisticsRepo.getDistinctServiceNames();
+	}
+
+	public List<ServiceStatistic> getStatsWithServiceName(StatsSearch statsSearch, int pageNumber, int pageSize) {
+		List<ServiceStatistic> list = serviceStatisticsRepo.findByService(statsSearch.getService(), PageRequest
+				.of(pageNumber, pageSize, Sort.by(statsSearch.getSortOrder(), statsSearch.getSortByAttribute())));
+		return list;
 	}
 }

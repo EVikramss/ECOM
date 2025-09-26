@@ -12,13 +12,13 @@ function Header() {
     return (
         <Navbar expand="lg" fixed="top" className="w-100 bg-body-tertiary headerBar">
             <Container fluid>
-                <Navbar.Brand href="#" onClick={() => navigate('/')}>Order Console</Navbar.Brand>
+                <Navbar.Brand href="#" onClick={() => navigate('/')}>Console</Navbar.Brand>
                 <Navbar.Toggle aria-controls="basic-navbar-nav" />
                 <Navbar.Collapse id="basic-navbar-nav">
                     <Nav className="me-auto">
-                        <NavDropdown title="Search" id="basic-nav-dropdown">
-                            <NavDropdown.Item onClick={() => navigate('/orderSearch')}>Order</NavDropdown.Item>
-                        </NavDropdown>
+						<Nav.Link onClick={() => navigate('/orderSearch')}>Orders</Nav.Link>
+						<Nav.Link onClick={() => navigate('/errorSearch')}>Errors</Nav.Link>
+						<Nav.Link onClick={() => navigate('/statsSearch')}>Stats</Nav.Link>
                     </Nav>
                 </Navbar.Collapse>
             </Container>

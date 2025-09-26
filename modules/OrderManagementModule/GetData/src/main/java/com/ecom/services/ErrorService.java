@@ -1,15 +1,20 @@
 package com.ecom.services;
 
+import java.math.BigInteger;
 import java.sql.Timestamp;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.ecom.common.Util;
+import com.ecom.dto.search.ErrorSearch;
 import com.ecom.entity.ServiceError;
 import com.ecom.exception.ServiceException;
 import com.ecom.repo.ServiceErrorsRepo;
@@ -48,7 +53,7 @@ public class ErrorService {
 			sb.append(element.toString()).append("\n");
 		}
 		String stackTrace = sb.toString();
-		
+
 		// limit to 2048 characters
 		stackTrace = stackTrace.substring(0, 2048);
 
@@ -60,8 +65,21 @@ public class ErrorService {
 		error.setService(serviceName);
 		error.setInput(prettyJson);
 		error.setStackTrace(stackTrace);
-		
+
 		serviceErrorsRepo.save(error);
 	}
 
+	public List<String> getServiceNames() {
+		return serviceErrorsRepo.getDistinctServiceNames();
+	}
+
+	public List<BigInteger> getErrorKeysWithServiceName(ErrorSearch errorSearch, int pageNumber, int pageSize) {
+		List<BigInteger> list = serviceErrorsRepo.findErrorKeyByService(errorSearch.getService(), PageRequest
+				.of(pageNumber, pageSize, Sort.by(errorSearch.getSortOrder(), errorSearch.getSortByAttribute())));
+		return list;
+	}
+
+	public ServiceError getErrorDetails(BigInteger errorKey) {
+		return serviceErrorsRepo.findById(errorKey).orElseThrow();
+	}
 }

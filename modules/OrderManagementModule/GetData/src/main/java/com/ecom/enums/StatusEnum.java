@@ -1,4 +1,4 @@
-package com.ecom.common;
+package com.ecom.enums;
 
 public enum StatusEnum {
 	CREATED(0), SCHEDULED(1), SHIPPED(2), CANCELLED(3);
