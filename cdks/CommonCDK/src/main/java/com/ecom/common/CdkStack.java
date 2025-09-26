@@ -255,7 +255,7 @@ public class CdkStack extends Stack {
 				.subnetConfiguration(Arrays.asList(SubnetConfiguration.builder().cidrMask(24).name("PrivateSubnet")
 						.subnetType(SubnetType.PRIVATE_ISOLATED).build()))
 				.ipAddresses(IpAddresses.cidr(ecomVPCCIDR)).maxAzs(99) // Use all AZ's
-				.enableDnsHostnames(true).enableDnsSupport(true).natGateways(0).flowLogs(null).build();
+				.enableDnsHostnames(true).enableDnsSupport(true).natGateways(0).build();
 
 		Bucket vpcflowLogsBucket = Bucket.Builder.create(this, "ECOMVPCFlowLogsBucket").build();
 		FlowLog.Builder.create(this, "ECOMVPCFlowLogs").flowLogName("ECOMVPCFlowLogs")
