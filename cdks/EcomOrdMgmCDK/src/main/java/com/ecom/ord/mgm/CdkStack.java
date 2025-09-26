@@ -423,6 +423,18 @@ public class CdkStack extends Stack {
 				.build();
 		ecsHTTPApi.addRoutes(AddRoutesOptions.builder().path("/getOrder").methods(List.of(HttpMethod.GET))
 				.authorizer(apiGatewayAuthorizer).integration(albIntegration).build());
+		ecsHTTPApi.addRoutes(AddRoutesOptions.builder().path("/searchOrder").methods(List.of(HttpMethod.POST))
+				.authorizer(apiGatewayAuthorizer).integration(albIntegration).build());
+		ecsHTTPApi.addRoutes(AddRoutesOptions.builder().path("/searchError").methods(List.of(HttpMethod.POST))
+				.authorizer(apiGatewayAuthorizer).integration(albIntegration).build());
+		ecsHTTPApi.addRoutes(AddRoutesOptions.builder().path("/getError").methods(List.of(HttpMethod.GET))
+				.authorizer(apiGatewayAuthorizer).integration(albIntegration).build());
+		ecsHTTPApi.addRoutes(AddRoutesOptions.builder().path("/getErrorServiceNames").methods(List.of(HttpMethod.GET))
+				.authorizer(apiGatewayAuthorizer).integration(albIntegration).build());
+		ecsHTTPApi.addRoutes(AddRoutesOptions.builder().path("/searchStats").methods(List.of(HttpMethod.POST))
+				.authorizer(apiGatewayAuthorizer).integration(albIntegration).build());
+		ecsHTTPApi.addRoutes(AddRoutesOptions.builder().path("/getStatServiceNames").methods(List.of(HttpMethod.GET))
+				.authorizer(apiGatewayAuthorizer).integration(albIntegration).build());
 	}
 
 	private void lookupNetwork() {
