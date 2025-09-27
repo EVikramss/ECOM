@@ -381,7 +381,7 @@ public class CdkStack extends Stack {
 
 		// point to getDataService
 		ApplicationTargetGroup targetGroup = ApplicationTargetGroup.Builder.create(this, "ALBTargetGroup").vpc(vpc)
-				.port(8080).protocol(ApplicationProtocol.HTTP).targetType(TargetType.IP)
+				.healthCheck(null).port(8080).protocol(ApplicationProtocol.HTTP).targetType(TargetType.IP)
 				.targets(List.of(getDataService)).build();
 
 		// listener for data service
@@ -402,6 +402,8 @@ public class CdkStack extends Stack {
 		// update SG permissions
 		albSecurityGroup.addIngressRule(vpcLinkSecurityGroup, Port.allTraffic());
 		albSecurityGroup.addEgressRule(vpcLinkSecurityGroup, Port.allTraffic());
+		albSecurityGroup.addEgressRule(asgsg, Port.allTraffic());
+		asgsg.addIngressRule(albSecurityGroup, Port.allTraffic());
 		vpcLinkSecurityGroup.addEgressRule(albSecurityGroup, Port.allTraffic());
 		vpcLinkSecurityGroup.addIngressRule(albSecurityGroup, Port.allTraffic());
 
