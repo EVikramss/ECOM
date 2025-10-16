@@ -18,7 +18,9 @@ import software.amazon.awscdk.services.apigatewayv2.CorsHttpMethod;
 import software.amazon.awscdk.services.apigatewayv2.CorsPreflightOptions;
 import software.amazon.awscdk.services.apigatewayv2.HttpApi;
 import software.amazon.awscdk.services.apigatewayv2.HttpMethod;
+import software.amazon.awscdk.services.apigatewayv2.IVpcLink;
 import software.amazon.awscdk.services.apigatewayv2.VpcLink;
+import software.amazon.awscdk.services.apigatewayv2.VpcLinkAttributes;
 import software.amazon.awscdk.services.cognito.AuthFlow;
 import software.amazon.awscdk.services.cognito.CfnUserPoolClient;
 import software.amazon.awscdk.services.cognito.CognitoDomainOptions;
@@ -93,6 +95,7 @@ import software.amazon.awscdk.services.servicediscovery.DnsRecordType;
 import software.amazon.awscdk.services.servicediscovery.IPrivateDnsNamespace;
 import software.amazon.awscdk.services.servicediscovery.PrivateDnsNamespace;
 import software.amazon.awscdk.services.servicediscovery.PrivateDnsNamespaceAttributes;
+import software.amazon.awscdk.services.sqs.IQueue;
 import software.amazon.awscdk.services.sqs.Queue;
 import software.constructs.Construct;
 
@@ -117,7 +120,7 @@ public class CdkStack extends Stack {
 	private UserPoolClient userPoolClient;
 	private IUserPool userPool;
 
-	private Queue createOrderQ;
+	private IQueue createOrderQ;
 
 	private CfnApp amplifyApp;
 
@@ -140,21 +143,16 @@ public class CdkStack extends Stack {
 		lookupNetwork();
 		lookupEndpoints();
 		lookupSecrets();
+		lookupSQS();
 
 		setupCognito();
 		createAuroraPostgresDB(dbreadRplCnt);
-		setupSQS();
 		setupOrderConsole(baseDir);
 		setupECSJobs();
 		exposeECSWithHttpApi();
 
 		// record output variables
 		setupOutputVariables();
-	}
-
-	private void setupSQS() {
-		createOrderQ = Queue.Builder.create(this, "CreateOrderQ").queueName("CreateOrderQ")
-				.retentionPeriod(Duration.days(1)).build();
 	}
 
 	private void setupOrderConsole(String baseDir) {
@@ -373,39 +371,24 @@ public class CdkStack extends Stack {
 		// fetch alb created in common stack
 		String albARNStr = System.getenv("ALBARN");
 		String albSGStr = System.getenv("ALBSG");
+		String vpclinkidStr = System.getenv("VPCLINKID");
 
-		ISecurityGroup albSecurityGroup = SecurityGroup.fromLookupById(this, albSGStr, albSGStr);
+		// fetch vpc link and ALB
+		IVpcLink vpcLink = VpcLink.fromVpcLinkAttributes(this, "VpcLink",
+				VpcLinkAttributes.builder().vpc(vpc).vpcLinkId(vpclinkidStr).build());
+
 		IApplicationLoadBalancer alb = ApplicationLoadBalancer.fromApplicationLoadBalancerAttributes(this, stackName,
 				ApplicationLoadBalancerAttributes.builder().loadBalancerArn(albARNStr).vpc(vpc)
 						.securityGroupId(albSGStr).build());
 
 		// point to getDataService
-		ApplicationTargetGroup targetGroup = ApplicationTargetGroup.Builder.create(this, "ALBTargetGroup").vpc(vpc)
+		ApplicationTargetGroup targetGroup = ApplicationTargetGroup.Builder.create(this, "DataTargetGroup").vpc(vpc)
 				.healthCheck(null).port(8080).protocol(ApplicationProtocol.HTTP).targetType(TargetType.IP)
 				.targets(List.of(getDataService)).build();
 
 		// listener for data service
 		ApplicationListener listener = alb.addListener("GetDataListener",
 				BaseApplicationListenerProps.builder().port(80).defaultTargetGroups(List.of(targetGroup)).build());
-
-		// select first 2 subnets
-		List<ISubnet> privateSubnets = vpc.getIsolatedSubnets();
-		List<ISubnet> subPrivateSubnets = List.of(privateSubnets.get(0), privateSubnets.get(1));
-
-		// create vpc link
-		SecurityGroup vpcLinkSecurityGroup = new SecurityGroup(this, "LinkSecurityGroup",
-				SecurityGroupProps.builder().vpc(vpc).allowAllOutbound(false).build());
-		VpcLink vpcLink = VpcLink.Builder.create(this, "VpcLink").vpc(vpc)
-				.subnets(SubnetSelection.builder().subnets(subPrivateSubnets).build())
-				.securityGroups(List.of(vpcLinkSecurityGroup)).build();
-
-		// update SG permissions
-		albSecurityGroup.addIngressRule(vpcLinkSecurityGroup, Port.allTraffic());
-		albSecurityGroup.addEgressRule(vpcLinkSecurityGroup, Port.allTraffic());
-		albSecurityGroup.addEgressRule(asgsg, Port.allTraffic());
-		asgsg.addIngressRule(albSecurityGroup, Port.allTraffic());
-		vpcLinkSecurityGroup.addEgressRule(albSecurityGroup, Port.allTraffic());
-		vpcLinkSecurityGroup.addIngressRule(albSecurityGroup, Port.allTraffic());
 
 		// integrate ALB listener with vpc link -
 		HttpAlbIntegration albIntegration = HttpAlbIntegration.Builder.create("ALBLinkIntegration", listener)
@@ -460,6 +443,11 @@ public class CdkStack extends Stack {
 			invdbSecret = software.amazon.awscdk.services.secretsmanager.Secret.fromSecretCompleteArn(this,
 					"INVDBSECARN", invdbsecarnStr);
 		}
+	}
+
+	private void lookupSQS() {
+		String createOrderQARN = System.getenv("CREATEORDERQARN");
+		createOrderQ = Queue.fromQueueArn(this, "CreateOrderQ", createOrderQARN);
 	}
 
 	/**

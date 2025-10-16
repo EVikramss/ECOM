@@ -1,0 +1,38 @@
+schema {
+  query: Query
+  mutation: Mutation
+}
+
+type Mutation {
+  createUserInfo(input: CreateUserInfoInput!): UserInfo
+  deleteUserInfo(input: DeleteUserInfoInput!): UserInfo
+  updateUserInfo(input: UpdateUserInfoInput!): UserInfo
+}
+
+type Query {
+  getUserInfo(infoType: String!, userSub: String!): UserInfo
+  generateOrderNo: String!
+}
+
+type UserInfo {
+  infoType: String!
+  userSub: String!
+  data: String!
+}
+
+input CreateUserInfoInput {
+  infoType: String!
+  userSub: String!
+  data: String!
+}
+
+input DeleteUserInfoInput {
+  infoType: String!
+  userSub: String!
+}
+
+input UpdateUserInfoInput {
+  infoType: String!
+  userSub: String!
+  data: String!
+}

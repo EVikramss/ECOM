@@ -1,0 +1,60 @@
+pipeline {
+    agent any
+
+    environment {
+        MODULE_NAME = 'OrderCaptureModule'
+    }
+
+    stages {
+		stage('SetPermissions') {
+            steps {
+                echo "SetPermissions"
+				sh 'rm -rf docs'
+				sh 'chmod -R +x modules/OrderCaptureModule'
+            }
+        }
+		
+        stage('Build') {
+            steps {
+				script {
+					echo "Build step"
+					
+					def mainScriptPath = 'modules/OrderCaptureModule/_scripts/build.sh'
+					echo "Executing ${mainScriptPath}"
+					sh "./${mainScriptPath}"
+					
+					echo "Build step complete"
+                }
+            }
+        }
+		
+		stage('Zip and Copy') {
+            steps {
+                script {
+					def timestamp = sh(script: "date +%Y%m%d_%H%M", returnStdout: true).trim()
+                    def zipFile = "repo_${timestamp}.zip"
+                    def dest = "/home/ec2-user/buildArtifacts"
+
+                    sh """
+                        zip -r ${zipFile} . -x '*.git*'
+                        cp ${zipFile} ${dest}/
+                    """
+					
+					echo "Build package name: ${zipFile}"
+                }
+            }
+        }
+    }
+
+    post {
+		always {
+			cleanWs()
+		}
+        success {
+            echo 'Pipeline completed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed.'
+        }
+    }
+}

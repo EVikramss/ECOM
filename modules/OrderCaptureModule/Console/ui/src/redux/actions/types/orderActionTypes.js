@@ -1,0 +1,2 @@
+export const MARK_ORDER_EXPORTED = "MARK_ORDER_EXPORTED";
+export const SET_ORDER_NO = "SET_ORDER_NO";

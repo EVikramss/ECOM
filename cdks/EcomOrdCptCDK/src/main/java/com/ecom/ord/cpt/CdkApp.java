@@ -1,4 +1,4 @@
-package com.ecom.ord.mgm;
+package com.ecom.ord.cpt;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -10,7 +10,7 @@ import software.amazon.awscdk.StackProps;
 
 public class CdkApp {
 
-	private static final String STACK_NAME = "ECOMORDMGM";
+	private static final String STACK_NAME = "ECOMORDCPT";
 	private static String accountID = null;
 	private static String defaultVPCID = null;
 	private static String deploymentRegion = null;
@@ -104,14 +104,10 @@ public class CdkApp {
 			deploymentRegion = "us-east-1";
 		}
 
-		checkEnvVariableWithDefaults("CreateOrderMEM", 512);
-		checkEnvVariableWithDefaults("CreateOrderCPU", 512);
-		checkEnvVariableWithDefaults("ScheduleOrderMEM", 512);
-		checkEnvVariableWithDefaults("ScheduleOrderCPU", 512);
-		checkEnvVariableWithDefaults("ShipOrderMEM", 512);
-		checkEnvVariableWithDefaults("ShipOrderCPU", 512);
-		checkEnvVariableWithDefaults("GetDataMEM", 512);
-		checkEnvVariableWithDefaults("GetDataCPU", 512);
+		checkEnvVariableWithDefaults("SkuListMEM", 512);
+		checkEnvVariableWithDefaults("SkuListCPU", 512);
+		checkEnvVariableWithDefaults("OrderHistoryReservedConcurrency", 0);
+		checkEnvVariableWithDefaults("OrderHistoryProvisionedConcurrency", 0);
 		
 		checkEnvVariableNotEmpty("VPCID");
 		checkEnvVariableNotEmpty("SMEPID");

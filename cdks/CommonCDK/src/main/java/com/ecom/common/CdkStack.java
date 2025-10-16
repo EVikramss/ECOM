@@ -5,8 +5,12 @@ import java.util.List;
 import java.util.Properties;
 
 import software.amazon.awscdk.CfnOutput;
+import software.amazon.awscdk.Duration;
 import software.amazon.awscdk.Stack;
 import software.amazon.awscdk.StackProps;
+import software.amazon.awscdk.aws_apigatewayv2_integrations.HttpAlbIntegration;
+import software.amazon.awscdk.services.apigatewayv2.HttpMethod;
+import software.amazon.awscdk.services.apigatewayv2.VpcLink;
 import software.amazon.awscdk.services.autoscaling.AutoScalingGroup;
 import software.amazon.awscdk.services.ec2.CfnRoute;
 import software.amazon.awscdk.services.ec2.CfnVPCPeeringConnection;
@@ -37,7 +41,10 @@ import software.amazon.awscdk.services.ecs.AsgCapacityProvider;
 import software.amazon.awscdk.services.ecs.CapacityProviderStrategy;
 import software.amazon.awscdk.services.ecs.Cluster;
 import software.amazon.awscdk.services.ecs.EcsOptimizedImage;
+import software.amazon.awscdk.services.elasticloadbalancingv2.ApplicationListener;
 import software.amazon.awscdk.services.elasticloadbalancingv2.ApplicationLoadBalancer;
+import software.amazon.awscdk.services.elasticloadbalancingv2.ApplicationProtocol;
+import software.amazon.awscdk.services.elasticloadbalancingv2.BaseApplicationListenerProps;
 import software.amazon.awscdk.services.iam.Effect;
 import software.amazon.awscdk.services.iam.ManagedPolicy;
 import software.amazon.awscdk.services.iam.PolicyStatement;
@@ -51,8 +58,12 @@ import software.amazon.awscdk.services.s3.BucketPolicy;
 import software.amazon.awscdk.services.s3.BucketPolicyProps;
 import software.amazon.awscdk.services.s3.BucketProps;
 import software.amazon.awscdk.services.servicediscovery.PrivateDnsNamespace;
+import software.amazon.awscdk.services.sqs.Queue;
 import software.constructs.Construct;
 
+/**
+ * 
+ */
 public class CdkStack extends Stack {
 
 	// Assuming USERVPC CIDR block is 10.1.0.0/16 from buildbox stack
@@ -69,6 +80,8 @@ public class CdkStack extends Stack {
 
 	private Bucket ecomBucket;
 
+	private Queue createOrderQ;
+
 	private Function runDDLFunc;
 	private ISecurityGroup runDDLFuncSG;
 
@@ -80,6 +93,7 @@ public class CdkStack extends Stack {
 
 	private SecurityGroup albSecurityGroup;
 	private ApplicationLoadBalancer alb;
+	private VpcLink vpcLink;
 
 	public CdkStack(final Construct scope, final String id, final StackProps props, Properties additionalProperties) {
 		super(scope, id, props);
@@ -92,20 +106,19 @@ public class CdkStack extends Stack {
 		setupRunDDLLambda("/home/cloudshell-user/ECOM/modules/CommonModule/");
 		setupECSCluster();
 		setupVPCALB();
+		setupSQS();
 
 		setupOutputVariables();
 	}
 
-	private void setupVPCALB() {
-		// create alb with sg
-		albSecurityGroup = new SecurityGroup(this, "ECSALBSecurityGroup",
-				SecurityGroupProps.builder().vpc(vpc).allowAllOutbound(false).build());
-
-		alb = ApplicationLoadBalancer.Builder.create(this, "ECSALB").vpc(vpc)
-				.vpcSubnets(SubnetSelection.builder().subnetType(SubnetType.PRIVATE_ISOLATED).build())
-				.securityGroup(albSecurityGroup).internetFacing(false).build();
+	private void setupSQS() {
+		createOrderQ = Queue.Builder.create(this, "CreateOrderQ").queueName("CreateOrderQ")
+				.retentionPeriod(Duration.days(1)).build();
 	}
 
+	/**
+	 * Setup ECS cluster with all the needed vpc endpoints
+	 */
 	private void setupECSCluster() {
 		// create ECS role and add permissions to it
 		ecsInstanceRole = Role.Builder.create(this, "EcsInstanceRole")
@@ -188,6 +201,9 @@ public class CdkStack extends Stack {
 		// need s3 endpoint to pull image from ecr
 		GatewayVpcEndpoint s3Endpoint = GatewayVpcEndpoint.Builder.create(this, "S3GatewayEndpoint").vpc(vpc)
 				.service(GatewayVpcEndpointAwsService.S3).build();
+		
+		GatewayVpcEndpoint dynDBEndpoint = GatewayVpcEndpoint.Builder.create(this, "DynDBGatewayEndpoint").vpc(vpc)
+				.service(GatewayVpcEndpointAwsService.DYNAMODB).build();
 
 		// need log endpoint to write logs to log group
 		InterfaceVpcEndpoint logEndpoint = InterfaceVpcEndpoint.Builder.create(this, "ECSLogInterfaceEndpoint").vpc(vpc)
@@ -201,6 +217,11 @@ public class CdkStack extends Stack {
 				.subnets(SubnetSelection.builder().subnets(subPrivateSubnets).build()).build();
 	}
 
+	/**
+	 * Lambda service to execute ddl queries against any rds db
+	 * 
+	 * @param baseDir
+	 */
 	private void setupRunDDLLambda(String baseDir) {
 
 		String lambdaName = "RunDDLQuery";
@@ -215,6 +236,9 @@ public class CdkStack extends Stack {
 				.securityGroups(Arrays.asList(runDDLFuncSG)).vpc(vpc).build();
 	}
 
+	/**
+	 * General purpose s3 bucket for ECOM activities and website hosting
+	 */
 	private void setupS3() {
 		ecomBucket = new Bucket(this, "ECOMBucket", BucketProps.builder().versioned(false).build());
 
@@ -226,13 +250,16 @@ public class CdkStack extends Stack {
 		PolicyStatement getObjectStatement = PolicyStatement.Builder.create().effect(Effect.ALLOW)
 				.principals(List.of(new ServicePrincipal("amplify.amazonaws.com"))).actions(List.of("s3:GetObject"))
 				.resources(List.of(ecomBucket.getBucketArn() + "/ordmgm/ui/*")).build();
-
+		
 		BucketPolicy bucketPolicy = new BucketPolicy(this, "ECOMBucketPolicy",
 				BucketPolicyProps.builder().bucket(ecomBucket).build());
 
 		bucketPolicy.getDocument().addStatements(listBucketStatement, getObjectStatement);
 	}
 
+	/**
+	 * Common VPC endpoints
+	 */
 	private void setupCommonVPCEndpoints() {
 		// setup secrets endpoint for vpc - choose 2 subnets to reduce eni's
 		List<ISubnet> privateSubnets = vpc.getIsolatedSubnets();
@@ -246,7 +273,7 @@ public class CdkStack extends Stack {
 	}
 
 	/**
-	 * Setup vpc with flow logs to s3 bucket
+	 * Setup isolated vpc with vpc flow logs enabled to s3 bucket
 	 */
 	private void setupNetworking() {
 
@@ -306,6 +333,39 @@ public class CdkStack extends Stack {
 	}
 
 	/**
+	 * Create an ALB in private VPC and a VPC Link to expose it
+	 */
+	private void setupVPCALB() {
+		// create alb with sg
+		albSecurityGroup = new SecurityGroup(this, "ECSALBSecurityGroup",
+				SecurityGroupProps.builder().vpc(vpc).allowAllOutbound(false).build());
+
+		// select first 2 subnets for setting up alb, vpc link
+		List<ISubnet> privateSubnets = vpc.getIsolatedSubnets();
+		List<ISubnet> subPrivateSubnets = List.of(privateSubnets.get(0), privateSubnets.get(1));
+
+		// alb
+		alb = ApplicationLoadBalancer.Builder.create(this, "ECSALB").vpc(vpc)
+				.vpcSubnets(SubnetSelection.builder().subnets(subPrivateSubnets).build())
+				.securityGroup(albSecurityGroup).internetFacing(false).build();
+
+		// vpc link
+		SecurityGroup vpcLinkSecurityGroup = new SecurityGroup(this, "LinkSecurityGroup",
+				SecurityGroupProps.builder().vpc(vpc).allowAllOutbound(false).build());
+		vpcLink = VpcLink.Builder.create(this, "VpcLink").vpc(vpc)
+				.subnets(SubnetSelection.builder().subnets(subPrivateSubnets).build())
+				.securityGroups(List.of(vpcLinkSecurityGroup)).build();
+
+		// add permission between alb and vpc link
+		albSecurityGroup.addIngressRule(vpcLinkSecurityGroup, Port.allTraffic());
+		albSecurityGroup.addEgressRule(vpcLinkSecurityGroup, Port.allTraffic());
+		vpcLinkSecurityGroup.addEgressRule(albSecurityGroup, Port.allTraffic());
+		vpcLinkSecurityGroup.addIngressRule(albSecurityGroup, Port.allTraffic());
+		albSecurityGroup.addEgressRule(asgsg, Port.allTraffic());
+		asgsg.addIngressRule(albSecurityGroup, Port.allTraffic());
+	}
+
+	/**
 	 * Output values from CDK to be used later.
 	 */
 	private void setupOutputVariables() {
@@ -314,6 +374,7 @@ public class CdkStack extends Stack {
 		CfnOutput.Builder.create(this, "SMSGID").value(smepsg.getSecurityGroupId()).build();
 		CfnOutput.Builder.create(this, "VPCID").value(vpc.getVpcId()).build();
 		CfnOutput.Builder.create(this, "ECOMBKTARN").value(ecomBucket.getBucketArn()).build();
+		CfnOutput.Builder.create(this, "ECOMBKTNAME").value(ecomBucket.getBucketName()).build();
 		CfnOutput.Builder.create(this, "RunDDLFUNCID").value(runDDLFunc.getFunctionArn()).build();
 		CfnOutput.Builder.create(this, "RunDDLSGID").value(runDDLFuncSG.getSecurityGroupId()).build();
 		CfnOutput.Builder.create(this, "RunDDLFUNCRLID").value(runDDLFunc.getRole().getRoleArn()).build();
@@ -327,5 +388,7 @@ public class CdkStack extends Stack {
 		CfnOutput.Builder.create(this, "ECSNMSPID").value(namespace.getNamespaceId()).build();
 		CfnOutput.Builder.create(this, "ALBARN").value(alb.getLoadBalancerArn()).build();
 		CfnOutput.Builder.create(this, "ALBSG").value(albSecurityGroup.getSecurityGroupId()).build();
+		CfnOutput.Builder.create(this, "CREATEORDERQARN").value(createOrderQ.getQueueArn()).build();
+		CfnOutput.Builder.create(this, "VPCLINKID").value(vpcLink.getVpcLinkId()).build();
 	}
 }

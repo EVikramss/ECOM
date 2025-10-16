@@ -1,0 +1,388 @@
+// define variables for each deployable module
+def repoPath
+def isSKUListExisting = true
+def isOrderHistoryExisting = true
+def isCaptureConsoleExisting = true
+def isUserInfoExisting = true
+def isItemInfoExisting = true
+def isDBExisting = true
+def areAllServicesExisting = true
+def runCDK = false
+
+// define variables for parameters
+def skuListMem
+def skuListCPU
+def ordHistResConc
+def ordHistProvConc
+def initialSkuCount
+def totalConcurrencyLimit = 360
+def maxContainerMemory = 1024
+def maxContainerCPU = 1024
+
+pipeline {
+    agent any
+
+    environment {
+        MODULE_NAME = 'OrderCaptureModule'
+    }
+
+    stages {
+		stage('validateInput') {
+            steps {
+				script {
+					skuListMem = params['SKU List Memory'].toInteger()
+					skuListCPU = params['SKU List CPU'].toInteger()
+					checkContainerMemCPU(skuListMem, skuListCPU, maxContainerMemory, maxContainerCPU, 'SKU List')
+
+					ordHistResConc = params['Order History Reserved Concurrency'].toInteger()
+					ordHistProvConc = params['Order History Provisioned Concurrency'].toInteger()
+					checkConcurrency(ordHistResConc, ordHistProvConc, 'Order History')					
+					checkOverallReservedConcurrency(ordHistResConc, totalConcurrencyLimit)
+					
+					initialSkuCount = params['Initial SKU Count (only used for first deployment)'].toInteger()
+				}
+            }
+        }
+	
+		stage('verifyAndExpandBuildPackagePresent') {
+            steps {
+				script {
+					def buildPackage = params['Build Package Name']
+					def buildPackagePath = "/home/ec2-user/buildArtifacts/" + buildPackage
+					repoPath = "/home/ec2-user/deploymentWorkspace3/"
+					if (!fileExists(buildPackagePath)) {
+						error('Build package not found!')
+					} else {
+						sh """
+							rm -rf ${repoPath}/*
+							unzip -q ${buildPackagePath} -d ${repoPath}/
+						"""
+					}
+				}
+            }
+        }
+		
+		stage('checkToCreateOrUpdateService') {
+            steps {
+				script {
+					def scriptPath = "${repoPath}/modules/OrderCaptureModule/Database/_scripts/checkExisting.sh"
+					isDBExisting = checkIfExisting(scriptPath)
+					areAllServicesExisting = areAllServicesExisting && isDBExisting
+					
+					scriptPath = "${repoPath}/modules/OrderCaptureModule/SkuList/_scripts/checkExisting.sh"
+					isSKUListExisting = checkIfExisting(scriptPath)
+					areAllServicesExisting = areAllServicesExisting && isSKUListExisting
+					
+					scriptPath = "${repoPath}/modules/OrderCaptureModule/OrderHistory/_scripts/checkExisting.sh"
+					isOrderHistoryExisting = checkIfExisting(scriptPath)
+					areAllServicesExisting = areAllServicesExisting && isOrderHistoryExisting
+					
+					scriptPath = "${repoPath}/modules/OrderCaptureModule/Console/_scripts/checkExisting.sh"
+					isCaptureConsoleExisting = checkIfExisting(scriptPath)
+					areAllServicesExisting = areAllServicesExisting && isCaptureConsoleExisting
+					
+					scriptPath = "${repoPath}/modules/OrderCaptureModule/UserInfo/_scripts/checkExisting.sh"
+					isUserInfoExisting = checkIfExisting(scriptPath)
+					areAllServicesExisting = areAllServicesExisting && isUserInfoExisting
+					
+					scriptPath = "${repoPath}/modules/OrderCaptureModule/ItemInfo/_scripts/checkExisting.sh"
+					isItemInfoExisting = checkIfExisting(scriptPath)
+					areAllServicesExisting = areAllServicesExisting && isItemInfoExisting
+					
+					if (params['Deploy Order Management Module']) {
+						runCDK = true
+					}
+				}
+            }
+        }
+		
+		/*
+		stage('SetPermissions') {
+            steps {
+                echo "SetPermissions"
+				script {
+					// sh "chmod -R +x ${repoPath}/"
+				}
+            }
+        }
+		*/
+		
+        stage('PreDeploy') {
+            steps {
+				script {					
+					if(!areAllServicesExisting && runCDK) {
+						echo "PreDeploy step"
+						
+						def mainScriptPath = "${repoPath}/modules/OrderCaptureModule/_scripts/preDeploy.sh"
+						echo "Executing ${mainScriptPath}"
+						sh "${mainScriptPath}"
+						
+						if (!isDBExisting) {
+							def scriptPath = "${repoPath}/modules/OrderCaptureModule/Database/_scripts/preDeploy.sh"
+							if (fileExists(scriptPath)) {
+								echo "Executing ${scriptPath}"
+								sh "${scriptPath}"
+							}
+						}
+	
+						if (!isCreateOrderExisting) {
+							def scriptPath = "${repoPath}/modules/OrderCaptureModule/ItemInfo/_scripts/preDeploy.sh"
+							if (fileExists(scriptPath)) {
+								echo "Executing ${scriptPath}"
+								sh "${scriptPath}"
+							}
+						}
+						
+						if (!isOrderConsoleExisting) {
+							def scriptPath = "${repoPath}/modules/OrderCaptureModule/Console/_scripts/preDeploy.sh"
+							if (fileExists(scriptPath)) {
+								echo "Executing ${scriptPath}"
+								sh "${scriptPath}"
+							}
+						}
+						
+						if (!isScheduleOrderExisting) {
+							def scriptPath = "${repoPath}/modules/OrderCaptureModule/OrderHistory/_scripts/preDeploy.sh"
+							if (fileExists(scriptPath)) {
+								echo "Executing ${scriptPath}"
+								sh "${scriptPath}"
+							}
+						}
+						
+						if (!isShipOrderExisting) {
+							def scriptPath = "${repoPath}/modules/OrderCaptureModule/SkuList/_scripts/preDeploy.sh"
+							if (fileExists(scriptPath)) {
+								echo "Executing ${scriptPath}"
+								sh "${scriptPath}"
+							}
+						}
+						
+						if (!isGetDataExisting) {
+							def scriptPath = "${repoPath}/modules/OrderCaptureModule/UserInfo/_scripts/preDeploy.sh"
+							if (fileExists(scriptPath)) {
+								echo "Executing ${scriptPath}"
+								sh "${scriptPath}"
+							}
+						}
+						
+						echo "PreDeploy step complete"
+					}
+                }
+            }
+        }
+
+        stage('DeployNewServices') {
+            steps {
+				script {
+					if(!areAllServicesExisting || runCDK) {
+						echo "Deploy step"
+						
+						def mainScriptPath = "${repoPath}/modules/OrderCaptureModule/_scripts/deploy.sh"
+						echo "Executing ${mainScriptPath}"
+						sh "${mainScriptPath} \"${skuListMem}\" \"${skuListCPU}\" \"${ordHistResConc}\" \"${ordHistProvConc}\" \"${initialSkuCount}\""
+						
+						def auxScriptPath = "${repoPath}/modules/OrderCaptureModule/Console/ui/_scripts/deploy.sh"
+						echo "Executing ${auxScriptPath}"
+						sh "${auxScriptPath}"
+						
+						echo "Deploy step complete"
+					}
+                }
+            }
+        }
+		
+		stage('initDB') {
+            steps {
+				script {
+					if(!isDBExisting) {
+						echo "Initialize DB step start"
+						
+						def scriptPath = "${repoPath}/modules/OrderCaptureModule/Database/_scripts/initDeployment.sh"
+						echo "Executing ${scriptPath}"
+						sh "${scriptPath}"
+						
+						echo "Initialize DB step complete"
+					}
+                }
+            }
+        }
+		
+		stage('PostDeploy') {
+            steps {
+                script {
+					if(!areAllServicesExisting && runCDK) {
+						echo "PostDeploy step"
+						
+						def mainScriptPath = "${repoPath}/modules/OrderCaptureModule/_scripts/postDeploy.sh"
+						echo "Executing ${mainScriptPath}"
+						sh "${mainScriptPath}"
+						
+						if (!isDBExisting) {
+							def scriptPath = "${repoPath}/modules/OrderCaptureModule/Database/_scripts/postDeploy.sh"
+							if (fileExists(scriptPath)) {
+								echo "Executing ${scriptPath}"
+								sh "${scriptPath}"
+							}
+						}
+	
+						if (!isCreateOrderExisting) {
+							def scriptPath = "${repoPath}/modules/OrderCaptureModule/ItemInfo/_scripts/postDeploy.sh"
+							if (fileExists(scriptPath)) {
+								echo "Executing ${scriptPath}"
+								sh "${scriptPath}"
+							}
+						}
+						
+						if (!isOrderConsoleExisting) {
+							def scriptPath = "${repoPath}/modules/OrderCaptureModule/Console/_scripts/postDeploy.sh"
+							if (fileExists(scriptPath)) {
+								echo "Executing ${scriptPath}"
+								sh "${scriptPath}"
+							}
+						}
+						
+						if (!isScheduleOrderExisting) {
+							def scriptPath = "${repoPath}/modules/OrderCaptureModule/OrderHistory/_scripts/postDeploy.sh"
+							if (fileExists(scriptPath)) {
+								echo "Executing ${scriptPath}"
+								sh "${scriptPath}"
+							}
+						}
+						
+						if (!isShipOrderExisting) {
+							def scriptPath = "${repoPath}/modules/OrderCaptureModule/SkuList/_scripts/postDeploy.sh"
+							if (fileExists(scriptPath)) {
+								echo "Executing ${scriptPath}"
+								sh "${scriptPath}"
+							}
+						}
+						
+						if (!isGetDataExisting) {
+							def scriptPath = "${repoPath}/modules/OrderCaptureModule/UserInfo/_scripts/postDeploy.sh"
+							if (fileExists(scriptPath)) {
+								echo "Executing ${scriptPath}"
+								sh "${scriptPath}"
+							}
+						}
+						
+						echo "PostDeploy step complete"
+					}
+                }
+            }
+        }
+		
+		stage('UpdateExistingServices') {
+            steps {
+				script {
+					echo "Update services start"
+					
+					if (isDBExisting && params['Update Database']) {
+						def scriptPath = "${repoPath}/modules/OrderCaptureModule/Database/_scripts/updateDeployment.sh"
+						if (fileExists(scriptPath)) {
+							echo "Executing ${scriptPath}"
+							sh "${scriptPath}"
+						}
+					}
+	
+					if (params['Update Item Info'] && isItemInfoExisting) {
+						def scriptPath = "${repoPath}/modules/OrderCaptureModule/ItemInfo/_scripts/updateDeployment.sh"
+						if (fileExists(scriptPath)) {
+							echo "Executing ${scriptPath}"
+							sh "${scriptPath}"
+						}
+					}
+					
+					if (params['Update Capture Console'] && isCaptureConsoleExisting) {
+						def scriptPath = "${repoPath}/modules/OrderCaptureModule/Console/_scripts/updateDeployment.sh"
+						if (fileExists(scriptPath)) {
+							echo "Executing ${scriptPath}"
+							sh "${scriptPath}"
+						}
+					}
+					
+					if (params['Update Order History service'] && isOrderHistoryExisting) {
+						def scriptPath = "${repoPath}/modules/OrderCaptureModule/OrderHistory/_scripts/updateDeployment.sh"
+						if (fileExists(scriptPath)) {
+							echo "Executing ${scriptPath}"
+							sh "${scriptPath} \"${ordHistResConc}\" \"${ordHistProvConc}\""
+						}
+					}
+					
+					if (params['Update SKU List service'] && isSKUListExisting) {
+						def scriptPath = "${repoPath}/modules/OrderCaptureModule/SkuList/_scripts/updateDeployment.sh"
+						if (fileExists(scriptPath)) {
+							echo "Executing ${scriptPath}"
+							sh "${scriptPath} \"${skuListMem}\" \"${skuListCPU}\""
+						}
+					}
+					
+					if (params['Update User Info'] && isUserInfoExisting) {
+						def scriptPath = "${repoPath}/modules/OrderCaptureModule/UserInfo/_scripts/updateDeployment.sh"
+						if (fileExists(scriptPath)) {
+							echo "Executing ${scriptPath}"
+							sh "${scriptPath}"
+						}
+					}
+					
+					echo "Update services complete"
+                }
+            }
+        }
+		
+		stage('Test') {
+            steps {
+                script {
+					echo "Test step start"
+	
+					if (params['Test Order Catpure']) {
+						def scriptPath = "${repoPath}/modules/OrderCaptureModule/Console/_scripts/test.sh"
+						if (fileExists(scriptPath)) {
+							echo "Executing ${scriptPath}"
+							sh "${scriptPath}"
+						}
+					}
+					
+					echo "Test step complete"
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Pipeline completed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed.'
+        }
+    }
+}
+
+def checkIfExisting(String scriptPath) {
+	echo "Executing ${scriptPath}"
+	def isServExisting = sh(script: "${scriptPath}", returnStatus: true)
+	return isServExisting
+}
+
+def checkConcurrency(int reservedConc, int provConc, String subModuleName) {
+	if (provConc > reservedConc) {
+		error(subModuleName + ': provisioned concurrency greater than reserved concurrency')
+	}
+}
+
+def checkContainerMemCPU(mem, cpu, maxContainerMemory, maxContainerCPU, subModuleName) {
+	if (mem > maxContainerMemory) {
+		error(subModuleName + ': memory greater than max memory')
+	}
+	
+	if (cpu > maxContainerCPU) {
+		error(subModuleName + ': cpu greater than max cpu')
+	}
+}
+
+def checkOverallReservedConcurrency(ordHistResConc, totalConcurrencyLimit) {
+	def totalConcurrency = ordHistResConc
+	if(totalConcurrency > totalConcurrencyLimit) {
+		error('Sum of reserved concurrency for all modules should not exceed ' + totalConcurrencyLimit)
+	}
+}

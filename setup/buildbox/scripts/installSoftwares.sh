@@ -9,6 +9,7 @@ sudo service docker start
 sudo usermod -a -G docker ec2-user
 sudo amazon-linux-extras install -y epel
 sudo yum install p7zip -y
+sudo yum install zip -y
 sudo ln -s /usr/bin/7za /usr/bin/7z
 
 # install maven
@@ -24,7 +25,7 @@ sudo npm install -g aws-cdk
 # install jenkins
 sudo wget -O /etc/yum.repos.d/jenkins.repo https://pkg.jenkins.io/redhat-stable/jenkins.repo
 sudo rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io.key
-sudo yum update
+sudo yum update -y
 sudo yum install -y jenkins --nogpgcheck			# Note: Do not use --nogpgcheck in prod environment
 sudo service jenkins start
 
