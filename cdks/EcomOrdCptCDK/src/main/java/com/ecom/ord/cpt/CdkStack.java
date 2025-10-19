@@ -137,7 +137,6 @@ public class CdkStack extends Stack {
 
 	private IVpc vpc;
 	private IInterfaceVpcEndpoint endpoint;
-	private DatabaseCluster dbCluster;
 
 	private ISecurityGroup smepsg;
 	private ISecurityGroup asgsg;
@@ -536,8 +535,6 @@ public class CdkStack extends Stack {
 						.dnsRecordType(DnsRecordType.A).build())
 				.vpcSubnets(SubnetSelection.builder().subnetType(SubnetType.PRIVATE_ISOLATED).build())
 				.taskDefinition(taskDefinition).desiredCount(0).build();
-
-		service.getNode().addDependency(dbCluster);
 
 		return service;
 	}
