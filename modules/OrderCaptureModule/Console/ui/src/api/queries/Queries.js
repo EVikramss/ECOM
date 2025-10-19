@@ -32,3 +32,17 @@ export const GET_USER_INFO = `query GetUserInfo {
     data
   }
 }`;
+
+export const GET_ITEM_INFO_OP_NAME = "getItemInfo";
+export const GET_ITEM_INFO = `query GetItemInfo {
+  getItemInfo(infoType: "{0}", itemID: "{1}") {
+    infoType
+    itemID
+    data
+  }
+}`;
+
+export const GET_ORDER_NO_OP_NAME = "generateOrderNo";
+export const GET_ORDER_NO = `query GenerateOrderNo {
+  generateOrderNo
+}`;

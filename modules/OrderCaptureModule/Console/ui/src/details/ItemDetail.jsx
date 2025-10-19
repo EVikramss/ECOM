@@ -1,12 +1,14 @@
 import { useParams, useLocation } from 'react-router-dom';
 import '../common/Common.css';
 import { useNavigate } from 'react-router-dom';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useDispatch, useSelector } from "react-redux";
 import { addToCart } from "../redux/actions/cartActions";
 import { toast } from "react-toastify";
 import { useAuth } from "react-oidc-context";
 import 'react-toastify/dist/ReactToastify.css';
+import { getSKUAvailability } from '../api/avlInfoAPI';
+import { apiCallError, beginApiCall, endApiCall } from '../redux/actions/apiBoundaryActions';
 
 function ItemDetail() {
     const { state } = useLocation();
@@ -14,18 +16,41 @@ function ItemDetail() {
     const navigate = useNavigate();
     const auth = useAuth();
 
+    const [qty, setQty] = useState(1);
+    const [inStock, setInStock] = useState(-1);
+
     const itemData = state.data;
     const {
         itemID,
         price,
         currency,
-        availability,
         maxQty,
         taxCode,
         desc,
         imgurl,
     } = itemData;
-    const [qty, setQty] = useState(1);
+
+    // fetch availability for item
+    useEffect(() => {
+        dispatch(beginApiCall());
+        getSKUAvailability(itemID).then(response => {
+            if (response.data["body-json"] && response.data["body-json"].Items.length > 0
+                && response.data["body-json"].Items[0].data.S) {
+                let availabilityValue = parseInt(response.data["body-json"].Items[0].data.S);
+                if (availabilityValue > 0) {
+                    setInStock(1);
+                } else {
+                    setInStock(0);
+                }
+            } else {
+                setInStock(0);
+            }
+            dispatch(endApiCall());
+        }).catch(error => {
+            setInStock(0);
+            dispatch(apiCallError(error));
+        });
+    }, []);
 
     const cartItems = useSelector(state => state.cartState.cartItems);
     let orderQty = 0;
@@ -51,8 +76,6 @@ function ItemDetail() {
             dispatch(addToCart(itemData, auth));
         }
     };
-
-    const inStock = availability === "InStock";
 
     return (
         <div className="bg-white headerSpacing">
@@ -85,15 +108,17 @@ function ItemDetail() {
                             <div className="mt-3 flex items-center gap-3">
                                 <p className="text-2xl font-bold text-gray-900">{price}</p>
 
-                                {inStock ? (
-                                    <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
-                                        In stock
-                                    </span>
-                                ) : (
-                                    <span className="inline-flex items-center rounded-full bg-rose-50 px-2.5 py-1 text-xs font-medium text-rose-700 ring-1 ring-inset ring-rose-600/20">
-                                        Out of stock
-                                    </span>
-                                )}
+                                {
+                                    inStock >= 0 ? (
+                                        inStock == 1 ? (
+                                            <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+                                                In stock
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center rounded-full bg-rose-50 px-2.5 py-1 text-xs font-medium text-rose-700 ring-1 ring-inset ring-rose-600/20">
+                                                Out of stock
+                                            </span>
+                                        )) : (<></>)}
                             </div>
                         </div>
 
@@ -108,7 +133,7 @@ function ItemDetail() {
                                     value={qty}
                                     onChange={(e) => setQty(Number(e.target.value))}
                                     className="block w-28 rounded-md border-0 bg-white py-2 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-indigo-600 sm:text-sm"
-                                    disabled={!inStock}
+                                    disabled={inStock != 1}
                                 >
                                     {Array.from({ length: Math.max(0, maxQty) }, (_, i) => i + 1).map((n) => (
                                         <option key={n} value={n}>
@@ -122,7 +147,7 @@ function ItemDetail() {
                                 <button
                                     type="button"
                                     onClick={onAddToCart}
-                                    disabled={!inStock}
+                                    disabled={inStock != 1}
                                     className={`inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-semibold shadow-sm focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${inStock
                                         ? "bg-indigo-600 text-white hover:bg-indigo-500 focus-visible:outline-indigo-600"
                                         : "bg-gray-200 text-gray-500 cursor-not-allowed"

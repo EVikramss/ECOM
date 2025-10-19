@@ -22,6 +22,7 @@ import software.amazon.awscdk.services.apigateway.IntegrationResponse;
 import software.amazon.awscdk.services.apigateway.MethodOptions;
 import software.amazon.awscdk.services.apigateway.MethodResponse;
 import software.amazon.awscdk.services.apigateway.Model;
+import software.amazon.awscdk.services.apigateway.Resource;
 import software.amazon.awscdk.services.apigateway.RestApi;
 import software.amazon.awscdk.services.apigatewayv2.AddRoutesOptions;
 import software.amazon.awscdk.services.apigatewayv2.CorsHttpMethod;
@@ -150,7 +151,7 @@ public class CdkStack extends Stack {
 	private IBucket bucket;
 	private Distribution distribution;
 	private GraphqlApi userInfoApi;
-	private GraphqlApi itemInfoApi;
+	private RestApi itemInfoApi;
 	private RestApi qapi;
 
 	private IQueue createOrderQ;
@@ -316,13 +317,47 @@ public class CdkStack extends Stack {
 		// get DB - start
 		ITable itemInfoTable = Table.fromTableName(this, "ItemInfo", "ItemInfo");
 
-		createAppSyncForItemInfoService(baseDir, itemInfoTable);
+		// createAppSyncForItemInfoService(baseDir, itemInfoTable);
+		createAPIGWForItemInfoService(baseDir, itemInfoTable);
+	}
+
+	private void createAPIGWForItemInfoService(String baseDir, ITable itemInfoTable) {
+		itemInfoApi = RestApi.Builder.create(this, "ItemInfoAPI").restApiName("ItemInfoAPI")
+				.defaultCorsPreflightOptions(CorsOptions.builder().allowCredentials(false).allowOrigins(List.of("*"))
+						.allowMethods(List.of(CorsHttpMethod.GET.toString()))
+						.allowHeaders(List.of("Content-Type", "origin", "accept")).maxAge(Duration.days(10)).build())
+				.build();
+		Resource infoResource = itemInfoApi.getRoot().addResource("info");
+
+		Role itemInfoRole = Role.Builder.create(this, "ItemInfoAPIGWRole")
+				.assumedBy(new ServicePrincipal("apigateway.amazonaws.com")).build();
+		itemInfoTable.grantReadData(itemInfoRole);
+
+		AwsIntegration apigwIntegration = AwsIntegration.Builder.create().service("dynamodb")
+				.integrationHttpMethod("POST").path("dynamodb/" + Stack.of(this).getRegion())
+				.options(IntegrationOptions.builder().credentialsRole(itemInfoRole)
+						.requestTemplates(Map.of("application/json", "{\n" + "  \"TableName\": \"ItemInfo\",\n"
+								+ "  \"KeyConditionExpression\": \"itemID = :itemId and infoType = :infoType\",\n"
+								+ "  \"ExpressionAttributeValues\": {\n"
+								+ "    \":itemId\": { \"S\": \"$input.params('itemID')\" },\n"
+								+ "    \":infoType\": { \"S\": \"$input.params('infoType')\" }\n" + "  }\n" + "}"))
+						.integrationResponses(List.of(IntegrationResponse.builder().statusCode("200")
+								.responseTemplates(Map.of("application/json",
+										"#set($allParams = $input.params())\n" + "{\n"
+												+ "\"body-json\" : $input.json('$')\n" + "}"))
+								.build()))
+						.build())
+				.build();
+
+		infoResource.addMethod("GET", apigwIntegration, MethodOptions.builder()
+				.methodResponses(List.of(MethodResponse.builder().statusCode("200").build())).build());
 	}
 
 	private void createAppSyncForItemInfoService(String baseDir, ITable itemInfoTable) {
 		// app sync for dynamodb
-		itemInfoApi = GraphqlApi.Builder.create(this, "ItemInfoApi").name("ItemInfoApi")
-				.definition(Definition.fromFile(baseDir + "ItemInfo/schema/schema.graphql")).xrayEnabled(false).build();
+		GraphqlApi itemInfoApi = GraphqlApi.Builder.create(this, "ItemInfoApi").name("ItemInfoApi")
+				.definition(Definition.fromFile(baseDir + "ItemInfo/appsync/schema/schema.graphql")).xrayEnabled(false)
+				.build();
 
 		Role appSyncRole = Role.Builder.create(this, "ItemInfoAppSyncRole")
 				.assumedBy(new ServicePrincipal("appsync.amazonaws.com")).build();
@@ -332,9 +367,9 @@ public class CdkStack extends Stack {
 		DynamoDbDataSource ddbDs = itemInfoApi.addDynamoDbDataSource("ItemInfoDataSource", itemInfoTable);
 
 		// Query.getInfo
-		Resolver.Builder.create(this, "GetAvlInfoResolver").api(itemInfoApi).dataSource(ddbDs).typeName("Query")
-				.fieldName("getAvlInfo").runtime(FunctionRuntime.JS_1_0_0)
-				.code(Code.fromAsset(baseDir + "ItemInfo/resolvers/getAvlInfo.js")).build();
+		Resolver.Builder.create(this, "GetItemInfoResolver").api(itemInfoApi).dataSource(ddbDs).typeName("Query")
+				.fieldName("getItemInfo").runtime(FunctionRuntime.JS_1_0_0)
+				.code(Code.fromAsset(baseDir + "ItemInfo/appsync/resolvers/getItemInfo.js")).build();
 	}
 
 	/**
@@ -575,7 +610,7 @@ public class CdkStack extends Stack {
 		CfnOutput.Builder.create(this, "CLOUDFRONTDOMAIN").value(distribution.getDistributionDomainName()).build();
 		CfnOutput.Builder.create(this, "USERINFOAPIID").value(userInfoApi.getApiId()).build();
 		CfnOutput.Builder.create(this, "USERINFOGRPHURL").value(userInfoApi.getGraphqlUrl()).build();
-		CfnOutput.Builder.create(this, "ITEMINFOGRPHURL").value(itemInfoApi.getGraphqlUrl()).build();
+		CfnOutput.Builder.create(this, "ITEMINFOURL").value(itemInfoApi.getUrl()).build();
 		CfnOutput.Builder.create(this, "WEBBUCKET").value(websiteBucket.getBucketArn()).build();
 		if (ecsHTTPApi != null) {
 			CfnOutput.Builder.create(this, "SKULISTEP").value(ecsHTTPApi.getApiEndpoint()).build();

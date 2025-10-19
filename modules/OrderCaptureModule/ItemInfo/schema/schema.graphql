@@ -1,7 +1,0 @@
-schema {
-  query: Query
-}
-
-type Query {
-  getAvlInfo(itemID: String!, infoType: String!): String!
-}

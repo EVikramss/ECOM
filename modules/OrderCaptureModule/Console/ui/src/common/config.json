@@ -1,12 +1,13 @@
 {
     "staticContentPrefix" : "STATIC_LOC",
-    "skuURL": "http://localhost:8080/getSkuList",
+    "skuURL": "SKU_URL",
     "userInfoURL": "USER_INFO_URL",
-    "avlInfoURL": "AVL_INFO_URL",
+    "itemInfoURL": "ITEM_INFO_URL",
     "orderURL": "ORDER_URL",
     "authority": "COGNITO_URL",
     "client_id": "CLIENT_ID",
     "redirect_uri": "REDIRECT_URL",
     "response_type": "code",
-    "scope" : "openid email"
+    "scope" : "openid email",
+    "entity": "TEST"
 }

@@ -1,0 +1,13 @@
+schema {
+  query: Query
+}
+
+type Query {
+  getItemInfo(itemID: String!, infoType: String!): ItemInfo
+}
+
+type ItemInfo {
+  infoType: String!
+  itemID: String!
+  data: String!
+}

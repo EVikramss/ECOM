@@ -12,6 +12,16 @@ export default function userInfoReducer(state = initialState.orderState, action)
     case types.SET_ORDER_NO:
       newState = { ...state };
       newState.orderNo = action.orderNo;
+      newState.orderNoRetry = false;
+      return newState;
+    case types.GET_ORDER_NO_ERROR:
+      newState = { ...state };
+      newState.orderNoRetry = true;
+      return newState;
+    case types.CLEAR_ORDER_NO:
+      newState = { ...state };
+      newState.orderNo = null;
+      newState.orderNoRetry = false;
       return newState;
     default:
       return state;

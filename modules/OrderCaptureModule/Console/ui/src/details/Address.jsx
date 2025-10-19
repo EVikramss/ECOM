@@ -5,6 +5,7 @@ import { storeUserAddress } from "../redux/actions/userAddressAction";
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from "react-oidc-context";
 import { getUserAddressList } from '../redux/actions/userAddressListAction';
+import { fetchOrderNo } from '../redux/actions/orderActions';
 
 function Address() {
   const auth = useAuth();
@@ -18,6 +19,10 @@ function Address() {
 
   const cartItems = useSelector((state) => state.cartState.cartItems);
   const cartCount = cartItems ? Object.keys(cartItems).length : 0;
+
+  const orderState = useSelector((state) => state.orderState);
+  const orderNo = orderState.orderNo;
+  const orderNoRetry = orderState.orderNoRetry;
 
   useEffect(() => {
     if (!auth.isAuthenticated) {
@@ -34,7 +39,7 @@ function Address() {
   const handleConfirmAddress = (e) => {
     e.preventDefault();
     dispatch(storeUserAddress(addressData[selectedAddressKey]));
-    navigate("/payment");
+    dispatch(fetchOrderNo(auth, navigate));
   };
 
   return (

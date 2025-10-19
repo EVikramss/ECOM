@@ -24,7 +24,7 @@ else
 	
     echo "Creating ItemInfo for item count '$initialSkuCount'"
 	
-	aws dynamodb import-table --s3-bucket-source S3Bucket="${ECOMBKTNAME}",S3KeyPrefix="/items/info/" --input-format CSV --table-creation-parameters '{"TableName":"ItemInfo","KeySchema": [{"AttributeName":"itemID","KeyType":"HASH"},{"AttributeName":"infoType","KeyType":"RANGE"}],"AttributeDefinitions":[{"AttributeName":"itemID","AttributeType":"S"},{"AttributeName":"infoType","AttributeType":"S"}],"BillingMode":"PAY_PER_REQUEST"}' --input-format-options '{"Csv": {"HeaderList": ["itemID", "infoType", "avl", "mov"], "Delimiter": ","}}' --input-compression-type GZIP
+	aws dynamodb import-table --s3-bucket-source S3Bucket="${ECOMBKTNAME}",S3KeyPrefix="/items/info/" --input-format CSV --table-creation-parameters '{"TableName":"ItemInfo","KeySchema": [{"AttributeName":"itemID","KeyType":"HASH"},{"AttributeName":"infoType","KeyType":"RANGE"}],"AttributeDefinitions":[{"AttributeName":"itemID","AttributeType":"S"},{"AttributeName":"infoType","AttributeType":"S"}],"BillingMode":"PAY_PER_REQUEST"}' --input-format-options '{"Csv": {"HeaderList": ["itemID", "infoType", "data", "mov"], "Delimiter": ","}}' --input-compression-type GZIP
 	
 	cd "$SCRIPT_DIR"
 fi

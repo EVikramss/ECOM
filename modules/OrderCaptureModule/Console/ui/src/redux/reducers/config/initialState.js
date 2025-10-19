@@ -18,7 +18,8 @@ export default {
   // track order
   orderState: {
     orderNo: null,
-    isOrderExported: false
+    isOrderExported: false,
+    orderNoRetry: false
   },
   // item and search params
   skuData: {

@@ -3,7 +3,4 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd $SCRIPT_DIR
 
-DBSECARN=$(aws cloudformation describe-stacks --stack-name ECOMORDMGM --query "Stacks[0].Outputs[?OutputKey=='DBSECARN'].OutputValue" --output text)
-sed -i "s#SECRET_ARN#${DBSECARN}#g" initQueriesRDS.json
-
-aws lambda invoke --function-name RunDDLQuery --payload fileb://initQueriesRDS.json response.json
+aws dynamodb put-item --region us-east-1 --table-name UserInfo --item '{"userSub":{"S": "orderNo"}, "infoType":{"S": "seq"}, "data": {"S": "10000"}}'

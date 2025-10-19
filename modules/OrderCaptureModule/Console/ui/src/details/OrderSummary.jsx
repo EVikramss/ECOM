@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useAuth } from "react-oidc-context";
 import * as orderAPI from '../api/orderAPI';
 import { clearCart } from '../redux/actions/cartActions';
+import { clearOrderNo } from '../redux/actions/orderActions';
 
 export default function OrderSummary() {
   const cartItems = useSelector((state) => state.cartState.cartItems);
@@ -14,8 +15,6 @@ export default function OrderSummary() {
   const totalAmount = itemsArray.reduce((sum, item) => sum + item.orderQty * parseFloat(item.price), 0);
 
   useEffect(() => {
-    dispatch(clearCart(auth));
-
     const orderJson = {};
     const orderNo = "test";
     const entity = "test";
@@ -51,6 +50,9 @@ export default function OrderSummary() {
 
     console.log(orderJson);
     orderAPI.postOrder(auth, orderJson);
+
+    dispatch(clearCart(auth));
+    dispatch(clearOrderNo());
   }, []);
 
   return (
