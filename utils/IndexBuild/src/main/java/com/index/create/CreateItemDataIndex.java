@@ -10,8 +10,10 @@ import java.util.List;
 
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.Document;
-import org.apache.lucene.document.DoubleField;
+import org.apache.lucene.document.DoubleDocValuesField;
+import org.apache.lucene.document.DoublePoint;
 import org.apache.lucene.document.Field.Store;
+import org.apache.lucene.document.StoredField;
 import org.apache.lucene.document.TextField;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
@@ -39,7 +41,7 @@ public class CreateItemDataIndex {
 		 * String[] subSkuArray = new String[] { skuArray[0], skuArray[1], skuArray[5],
 		 * skuArray[7], skuArray[8], skuArray[9] }; skuList.add(subSkuArray); } }
 		 */
-		
+
 		List<String[]> skuList = new ArrayList<String[]>();
 		try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(new File("itemData"))))) {
 			String lineStr = null;
@@ -49,22 +51,6 @@ public class CreateItemDataIndex {
 			}
 		}
 
-		/*
-		 * for (int counter = 0; counter < skuList.size(); counter++) { String[]
-		 * skuArray = skuList.get(counter); String itemID = skuArray[0]; Double price =
-		 * Double.parseDouble(skuArray[1]); String desc = skuArray[2]; String brand =
-		 * skuArray[3]; String category = skuArray[4]; String subCategory = skuArray[5];
-		 * 
-		 * Document document = new Document(); document.add(new TextField("itemID",
-		 * itemID, Store.YES)); document.add(new DoubleField("price", price, Store.NO));
-		 * document.add(new TextField("desc", desc, Store.NO)); document.add(new
-		 * TextField("brand", brand, Store.NO)); document.add(new TextField("category",
-		 * category, Store.NO)); document.add(new TextField("subcategory", subCategory,
-		 * Store.NO));
-		 * 
-		 * writer.addDocument(document); }
-		 */
-		
 		for (int counter = 0; counter < skuList.size(); counter++) {
 			String[] skuArray = skuList.get(counter);
 			String itemID = skuArray[0];
@@ -80,7 +66,10 @@ public class CreateItemDataIndex {
 
 			Document document = new Document();
 			document.add(new TextField("itemID", itemID, Store.YES));
-			document.add(new DoubleField("price", price, Store.YES));
+			// document.add(new DoubleField("price", price, Store.YES));
+			document.add(new DoublePoint("price", price));
+			document.add(new StoredField("price", price));
+			document.add(new DoubleDocValuesField("price", price));
 			document.add(new TextField("currency", currency, Store.YES));
 			document.add(new TextField("maxQty", maxQty, Store.YES));
 			document.add(new TextField("taxCode", taxCode, Store.YES));

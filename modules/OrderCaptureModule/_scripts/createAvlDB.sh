@@ -13,9 +13,13 @@ else
 	mvn exec:java -Dexec.mainClass="com.data.generate.GenerateItemData" -Dexec.args="100"
 	mvn exec:java -Dexec.mainClass="com.data.generate.GenerateItemAvailability"
 	mvn exec:java -Dexec.mainClass="com.index.create.CreateItemDataIndex"
-	zip -r index.zip index
+	
+	cd index
+	zip -r ../index.zip ./*
+	cd ..
 	
 	aws s3 cp itemInfo.gz s3://"$ECOMBKTNAME"/items/info/itemInfo.gz
+	aws s3 cp itemSply.gz s3://"$ECOMBKTNAME"/items/supply/itemSply.gz
 	aws s3 cp index.zip s3://"$ECOMBKTNAME"/items/index/index.zip
 	
     echo "Creating ItemInfo for item count '$initialSkuCount'"

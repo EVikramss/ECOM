@@ -10,6 +10,7 @@ client_pool_id=$(aws cloudformation describe-stacks --stack-name ECOMORDCPT --qu
 
 CLOUDFRONTDOMAIN=$(aws cloudformation describe-stacks --stack-name ECOMORDCPT --query "Stacks[0].Outputs[?OutputKey=='CLOUDFRONTDOMAIN'].OutputValue" --output text)
 updated_callback_url=$(echo "https://$CLOUDFRONTDOMAIN/" | awk '{print tolower($0)}')
+static_content_url=$(echo "https://$CLOUDFRONTDOMAIN/ordcpt/ui/images/" | awk '{print tolower($0)}')
 
 aws cognito-idp update-user-pool-client --user-pool-id "$client_pool_id" --client-id "$client_id" --callback-urls "[\"$updated_callback_url\"]" --supported-identity-providers "[\"COGNITO\"]" --allowed-o-auth-flows "[\"code\"]" --allowed-o-auth-scopes "[\"phone\",\"openid\",\"email\"]" --allowed-o-auth-flows-user-pool-client --output text
 cognitoURL="https://cognito-idp.us-east-1.amazonaws.com/$client_pool_id"
@@ -28,6 +29,7 @@ sed -i "s#ORDER_URL#${SNSAPIURL}#g" src/common/config.json
 sed -i "s#COGNITO_URL#${cognitoURL}#g" src/common/config.json
 sed -i "s#CLIENT_ID#${client_id}#g" src/common/config.json
 sed -i "s#REDIRECT_URL#${updated_callback_url}#g" src/common/config.json
+sed -i "s#STATIC_LOC#${static_content_url}#g" src/common/config.json
 
 # build ui
 npm install
@@ -41,6 +43,12 @@ s3bucket_arn=$(aws cloudformation describe-stacks --stack-name ECOMORDCPT --quer
 s3bucket="${s3bucket_arn##*:}"
 aws s3 rm "s3://$s3bucket/ordcpt/ui/" --recursive
 aws s3 cp ./dist/ "s3://$s3bucket/ordcpt/ui/" --recursive
+
+# copy image files to bucket
+cd "$SCRIPT_DIR/../../"
+mkdir images
+unzip -q images.zip ./images
+aws s3 cp ./images/ "s3://$s3bucket/ordcpt/ui/images" --recursive
 
 # update api gateway allowed origin to cloudfront url
 SKULISTID=$(aws cloudformation describe-stacks --stack-name ECOMORDCPT --query "Stacks[0].Outputs[?OutputKey=='SKULISTID'].OutputValue" --output text)

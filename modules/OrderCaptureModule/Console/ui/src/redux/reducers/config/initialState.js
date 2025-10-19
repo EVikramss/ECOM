@@ -19,5 +19,16 @@ export default {
   orderState: {
     orderNo: null,
     isOrderExported: false
+  },
+  // item and search params
+  skuData: {
+    skuList: [],
+    pageData: {
+      // pageNumber: 0,
+      lastPageReached: false
+    },
+    searchParams: {
+      pageSize: 30
+    }
   }
 };

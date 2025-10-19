@@ -6,7 +6,7 @@ import { clearCart } from '../redux/actions/cartActions';
 
 export default function OrderSummary() {
   const cartItems = useSelector((state) => state.cartState.cartItems);
-  const userAddress = useSelector((state) => state.userAddress);
+  const userAddress = useSelector((state) => state.userSelectedAddress);
   const auth = useAuth();
   const dispatch = useDispatch();
 

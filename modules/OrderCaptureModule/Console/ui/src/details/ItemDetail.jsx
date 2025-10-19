@@ -13,7 +13,7 @@ function ItemDetail() {
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const auth = useAuth();
-    
+
     const itemData = state.data;
     const {
         itemID,
@@ -56,6 +56,15 @@ function ItemDetail() {
 
     return (
         <div className="bg-white headerSpacing">
+            <button
+                type="button"
+                onClick={() => navigate(-1)}
+                className="paraSpacing inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-semibold 
+                    shadow-sm bg-indigo-600 text-white hover:bg-indigo-500 offset ml-2"
+            >
+                ← Back
+            </button>
+
             <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
                 <div className="grid grid-cols-1 gap-10 lg:grid-cols-2 lg:gap-16">
                     <div className="w-full">

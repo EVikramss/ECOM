@@ -76,7 +76,6 @@ import software.amazon.awscdk.services.ec2.ISecurityGroup;
 import software.amazon.awscdk.services.ec2.IVpc;
 import software.amazon.awscdk.services.ec2.InterfaceVpcEndpoint;
 import software.amazon.awscdk.services.ec2.InterfaceVpcEndpointAttributes;
-import software.amazon.awscdk.services.ec2.Port;
 import software.amazon.awscdk.services.ec2.SecurityGroup;
 import software.amazon.awscdk.services.ec2.SecurityGroupProps;
 import software.amazon.awscdk.services.ec2.SubnetSelection;
@@ -104,11 +103,9 @@ import software.amazon.awscdk.services.elasticloadbalancingv2.ApplicationTargetG
 import software.amazon.awscdk.services.elasticloadbalancingv2.BaseApplicationListenerProps;
 import software.amazon.awscdk.services.elasticloadbalancingv2.IApplicationLoadBalancer;
 import software.amazon.awscdk.services.elasticloadbalancingv2.TargetType;
-import software.amazon.awscdk.services.iam.Effect;
 import software.amazon.awscdk.services.iam.IManagedPolicy;
 import software.amazon.awscdk.services.iam.IRole;
 import software.amazon.awscdk.services.iam.ManagedPolicy;
-import software.amazon.awscdk.services.iam.PolicyStatement;
 import software.amazon.awscdk.services.iam.Role;
 import software.amazon.awscdk.services.iam.ServicePrincipal;
 import software.amazon.awscdk.services.lambda.Function;
@@ -450,7 +447,7 @@ public class CdkStack extends Stack {
 				PrivateDnsNamespaceAttributes.builder().namespaceArn(System.getenv("ECSNMSPARN"))
 						.namespaceId(System.getenv("ECSNMSPID")).namespaceName("ecom.internal").build());
 
-		// getSkuListService = setupECSJob(baseDir, "SkuList", asgRole, asgsg, cluster, pdn);
+		getSkuListService = setupECSJob(baseDir, "SkuList", asgRole, asgsg, cluster, pdn);
 	}
 
 	private Ec2Service setupECSJob(String baseDir, String jobName, IRole asgRole, ISecurityGroup asgsg,
@@ -485,7 +482,7 @@ public class CdkStack extends Stack {
 				.cpu(Integer.parseInt(additionalProperties.getProperty(jobName + "CPU")))
 				.portMappings(List.of(PortMapping.builder().containerPort(8080).build()))
 				.logging(LogDriver.awsLogs(AwsLogDriverProps.builder().logGroup(logGroup).streamPrefix("ecom").build()))
-				.environment(Map.of("indexLoc", bucket.getBucketName() + "/items/index/index.zip")).build());
+				.environment(Map.of("bucketName", bucket.getBucketName())).build());
 
 		// create service for task - use same sg as asg
 		// expose service with cloud map and dns A records

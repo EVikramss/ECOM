@@ -34,12 +34,14 @@ public class GenerateItemAvailability {
 		}
 
 		List<String> nodeList = new ArrayList<String>();
-		for (int counter = 0; counter < 100; counter++) {
+		for (int counter = 0; counter < 33; counter++) {
 			nodeList.add("node" + counter);
 		}
 
-		try (GZIPOutputStream zos = new GZIPOutputStream(
-				new BufferedOutputStream(new FileOutputStream(new File("itemInfo.gz"))))) {
+		try (GZIPOutputStream itemSupply = new GZIPOutputStream(
+				new BufferedOutputStream(new FileOutputStream(new File("itemSply.gz"))));
+				GZIPOutputStream itemInfo = new GZIPOutputStream(
+						new BufferedOutputStream(new FileOutputStream(new File("itemInfo.gz"))))) {
 
 			// add header
 			/*
@@ -51,56 +53,26 @@ public class GenerateItemAvailability {
 			// add data
 			skuList.parallelStream().forEach(ia -> {
 				String itemID = ia[0];
+				int totalavl = 0;
 
 				for (int counter2 = 0; counter2 < nodeList.size(); counter2++) {
 					String node = nodeList.get(counter2);
-					int avl = (int) (random.nextDouble() * 200.0);
+					int avl = (int) (random.nextDouble() * 10.0);
 					try {
-						byte[] dataBytes = (itemID + "," + node + "," + avl + ",0" + System.lineSeparator()).getBytes();
-						zos.write(dataBytes, 0, dataBytes.length);
+						byte[] dataBytes = (itemID + "," + node + "," + avl + System.lineSeparator()).getBytes();
+						itemSupply.write(dataBytes, 0, dataBytes.length);
+						totalavl += avl;
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
 				}
-			});
-		}
-	}
 
-	private void create() throws Exception {
-		List<String[]> skuList = new ArrayList<String[]>();
-		try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(new File("itemData"))))) {
-			String lineStr = null;
-			while ((lineStr = br.readLine()) != null) {
-				String[] skuArray = lineStr.split(READ_FIELD_SPACING);
-				String[] subSKUArray = new String[] { skuArray[0] };
-				skuList.add(subSKUArray);
-			}
-		}
-
-		List<String> nodeList = new ArrayList<String>();
-		for (int counter = 0; counter < 100; counter++) {
-			nodeList.add("node" + counter);
-		}
-
-		try (BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(new File("itemAvl")))) {
-
-			// add header
-			byte[] headerBytes = ("itemID,node,avl,mov" + System.lineSeparator()).getBytes();
-			bos.write(headerBytes, 0, headerBytes.length);
-
-			// add data
-			skuList.parallelStream().forEach(ia -> {
-				String itemID = ia[0];
-
-				for (int counter2 = 0; counter2 < nodeList.size(); counter2++) {
-					String node = nodeList.get(counter2);
-					int avl = (int) (random.nextDouble() * 200.0);
-					try {
-						byte[] dataBytes = (itemID + "," + node + "," + avl + ",0" + System.lineSeparator()).getBytes();
-						bos.write(dataBytes, 0, dataBytes.length);
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
+				try {
+					byte[] dataBytes = (itemID + "," + "TEST" + "," + totalavl + ",0" + System.lineSeparator())
+							.getBytes();
+					itemInfo.write(dataBytes, 0, dataBytes.length);
+				} catch (IOException e) {
+					e.printStackTrace();
 				}
 			});
 		}

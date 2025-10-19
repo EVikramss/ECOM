@@ -62,34 +62,38 @@ function Address() {
                   </p>
                 )}
               </div>
-              <button
-                onClick={() => handleSelect(key)}
-                className="text-sm text-blue-600 hover:underline"
-              >
-                Select
-              </button>
+              <input
+                type="checkbox"
+                checked={key === selectedAddressKey}
+                onChange={() => handleSelect(key)}
+                className="mt-2"
+              />
             </div>
           </div>
         ))}
       </div>
 
-      <div className="lineSpacing"/>
+      <div className="lineSpacing" />
 
-      <a 
+      <a
         onClick={() => navigate('/profile', { state: { tab: 'Addresses' } })}>
         To add new address click here
       </a>
 
-      <div className="paraSpacing"/>
+      <div className="paraSpacing" />
 
       <div className="mt-8">
         <button onClick={handleConfirmAddress} disabled={cartCount < 1 || selectedAddressKey == null}
-          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 focus-visible:outline-indigo-600 text-white rounded">
+          className={`px-4 py-2 rounded text-white focus-visible:outline-indigo-600
+              ${cartCount < 1 || selectedAddressKey == null
+              ? 'bg-indigo-300 cursor-not-allowed'
+              : 'bg-indigo-600 hover:bg-indigo-500'}
+          `}>
           Confirm
         </button>
       </div>
 
-    </div>
+    </div >
   )
 }
 

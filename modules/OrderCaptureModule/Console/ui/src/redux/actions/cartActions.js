@@ -85,6 +85,8 @@ export function readCart(auth, init) {
                 }).catch(error => {
                     dispatch(apiCallError(error));
                 });
+            } else {
+                dispatch(endApiCall());
             }
         } catch (error) {
             toast.error("Error reading cart");

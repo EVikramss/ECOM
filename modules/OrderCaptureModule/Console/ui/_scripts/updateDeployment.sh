@@ -9,6 +9,7 @@ client_id=$(aws cloudformation describe-stacks --stack-name ECOMORDCPT --query "
 client_pool_id=$(aws cloudformation describe-stacks --stack-name ECOMORDCPT --query "Stacks[0].Outputs[?OutputKey=='ORDCAPUSERPOOLID'].OutputValue" --output text)
 CLOUDFRONTDOMAIN=$(aws cloudformation describe-stacks --stack-name ECOMORDCPT --query "Stacks[0].Outputs[?OutputKey=='CLOUDFRONTDOMAIN'].OutputValue" --output text)
 updated_callback_url=$(echo "https://$CLOUDFRONTDOMAIN/" | awk '{print tolower($0)}')
+static_content_url=$(echo "https://$CLOUDFRONTDOMAIN/ordcpt/ui/images/" | awk '{print tolower($0)}')
 USERINFOGRPHURL=$(aws cloudformation describe-stacks --stack-name ECOMORDCPT --query "Stacks[0].Outputs[?OutputKey=='USERINFOGRPHURL'].OutputValue" --output text)
 ITEMINFOGRPHURL=$(aws cloudformation describe-stacks --stack-name ECOMORDCPT --query "Stacks[0].Outputs[?OutputKey=='ITEMINFOGRPHURL'].OutputValue" --output text)
 SNSAPIURL=$(aws cloudformation describe-stacks --stack-name ECOMORDCPT --query "Stacks[0].Outputs[?OutputKey=='SNSAPIURL'].OutputValue" --output text)
@@ -23,6 +24,7 @@ sed -i "s#ORDER_URL#${SNSAPIURL}#g" src/common/config.json
 sed -i "s#COGNITO_URL#${cognitoURL}#g" src/common/config.json
 sed -i "s#CLIENT_ID#${client_id}#g" src/common/config.json
 sed -i "s#REDIRECT_URL#${updated_callback_url}#g" src/common/config.json
+sed -i "s#STATIC_LOC#${static_content_url}#g" src/common/config.json
 
 # build ui
 npm install

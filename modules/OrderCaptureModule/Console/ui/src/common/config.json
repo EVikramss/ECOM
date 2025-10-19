@@ -1,5 +1,6 @@
 {
-    "skuURL": "SKU_URL",
+    "staticContentPrefix" : "STATIC_LOC",
+    "skuURL": "http://localhost:8080/getSkuList",
     "userInfoURL": "USER_INFO_URL",
     "avlInfoURL": "AVL_INFO_URL",
     "orderURL": "ORDER_URL",

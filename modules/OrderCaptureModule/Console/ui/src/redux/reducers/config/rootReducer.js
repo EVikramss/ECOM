@@ -5,14 +5,16 @@ import userInfoReducer from "../userInfoReducer";
 import userAddressReducer from "../userAddressReducer";
 import userAddressListReducer from "../userAddressListReducer";
 import orderReducer from "../orderReducer";
+import skuListReducer from "../skuListReducer";
 
 const rootReducer = combineReducers({
   apiCallsInProgress: apiBoundaryReducer,
   userInfo: userInfoReducer,
-  userAddress: userAddressReducer,
+  userSelectedAddress: userAddressReducer,
   addressListState: userAddressListReducer,
   cartState: cartReducer,  
-  orderState: orderReducer
+  orderState: orderReducer,
+  skuData: skuListReducer
 });
 
 export default rootReducer;
