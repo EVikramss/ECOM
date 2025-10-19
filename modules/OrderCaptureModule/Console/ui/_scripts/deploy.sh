@@ -46,9 +46,9 @@ aws s3 cp ./dist/ "s3://$s3bucket/ordcpt/ui/" --recursive
 
 # copy image files to bucket
 cd "$SCRIPT_DIR/../../"
-mkdir images
-unzip -q images.zip ./images
-aws s3 cp ./images/ "s3://$s3bucket/ordcpt/ui/images" --recursive
+mkdir /tmp/images
+unzip -q images.zip -d /tmp/images
+aws s3 cp /tmp/images/ "s3://$s3bucket/ordcpt/ui/images" --recursive
 
 # update api gateway allowed origin to cloudfront url
 SKULISTID=$(aws cloudformation describe-stacks --stack-name ECOMORDCPT --query "Stacks[0].Outputs[?OutputKey=='SKULISTID'].OutputValue" --output text)
