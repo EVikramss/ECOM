@@ -509,12 +509,20 @@ public class CdkStack extends Stack {
 				.retention(RetentionDays.ONE_DAY).build();
 		logGroup.grantWrite(asgRole);
 
+		int mem = 512;
+		int cpu = 512;
+
+		try {
+			mem = Integer.parseInt(additionalProperties.getProperty(jobName + "MEM"));
+			cpu = Integer.parseInt(additionalProperties.getProperty(jobName + "CPU"));
+		} catch (Exception e) {
+
+		}
+
 		// define container along with rds secret
 		String imageURI = System.getenv("ECRREPO") + ":" + jobName.toLowerCase();
 		ContainerDefinition container = taskDefinition.addContainer(jobName + "Container", ContainerDefinitionOptions
-				.builder().image(ContainerImage.fromRegistry(imageURI))
-				.memoryLimitMiB(Integer.parseInt(additionalProperties.getProperty(jobName + "MEM")))
-				.cpu(Integer.parseInt(additionalProperties.getProperty(jobName + "CPU")))
+				.builder().image(ContainerImage.fromRegistry(imageURI)).memoryLimitMiB(mem).cpu(cpu)
 				.portMappings(List.of(PortMapping.builder().containerPort(8080).build()))
 				.logging(LogDriver.awsLogs(AwsLogDriverProps.builder().logGroup(logGroup).streamPrefix("ecom").build()))
 				.environment(Map.of("bucketName", bucket.getBucketName())).build());
