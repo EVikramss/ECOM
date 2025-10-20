@@ -73,7 +73,7 @@ pipeline {
 					isSKUListExisting = checkIfExisting(scriptPath)
 					areAllServicesExisting = areAllServicesExisting && isSKUListExisting
 					
-					scriptPath = "${repoPath}/modules/OrderCaptureModule/OrderHistory/_scripts/checkExisting.sh"
+					scriptPath = "${repoPath}/modules/OrderCaptureModule/OrderHistoryOp/_scripts/checkExisting.sh"
 					isOrderHistoryExisting = checkIfExisting(scriptPath)
 					areAllServicesExisting = areAllServicesExisting && isOrderHistoryExisting
 					
@@ -125,7 +125,7 @@ pipeline {
 							}
 						}
 	
-						if (!isCreateOrderExisting) {
+						if (!isItemInfoExisting) {
 							def scriptPath = "${repoPath}/modules/OrderCaptureModule/ItemInfo/_scripts/preDeploy.sh"
 							if (fileExists(scriptPath)) {
 								echo "Executing ${scriptPath}"
@@ -133,7 +133,7 @@ pipeline {
 							}
 						}
 						
-						if (!isOrderConsoleExisting) {
+						if (!isCaptureConsoleExisting) {
 							def scriptPath = "${repoPath}/modules/OrderCaptureModule/Console/_scripts/preDeploy.sh"
 							if (fileExists(scriptPath)) {
 								echo "Executing ${scriptPath}"
@@ -141,15 +141,15 @@ pipeline {
 							}
 						}
 						
-						if (!isScheduleOrderExisting) {
-							def scriptPath = "${repoPath}/modules/OrderCaptureModule/OrderHistory/_scripts/preDeploy.sh"
+						if (!isOrderHistoryExisting) {
+							def scriptPath = "${repoPath}/modules/OrderCaptureModule/OrderHistoryOp/_scripts/preDeploy.sh"
 							if (fileExists(scriptPath)) {
 								echo "Executing ${scriptPath}"
 								sh "${scriptPath}"
 							}
 						}
 						
-						if (!isShipOrderExisting) {
+						if (!isSKUListExisting) {
 							def scriptPath = "${repoPath}/modules/OrderCaptureModule/SkuList/_scripts/preDeploy.sh"
 							if (fileExists(scriptPath)) {
 								echo "Executing ${scriptPath}"
@@ -157,7 +157,7 @@ pipeline {
 							}
 						}
 						
-						if (!isGetDataExisting) {
+						if (!isUserInfoExisting) {
 							def scriptPath = "${repoPath}/modules/OrderCaptureModule/UserInfo/_scripts/preDeploy.sh"
 							if (fileExists(scriptPath)) {
 								echo "Executing ${scriptPath}"
@@ -225,7 +225,7 @@ pipeline {
 							}
 						}
 	
-						if (!isCreateOrderExisting) {
+						if (!isItemInfoExisting) {
 							def scriptPath = "${repoPath}/modules/OrderCaptureModule/ItemInfo/_scripts/postDeploy.sh"
 							if (fileExists(scriptPath)) {
 								echo "Executing ${scriptPath}"
@@ -233,7 +233,7 @@ pipeline {
 							}
 						}
 						
-						if (!isOrderConsoleExisting) {
+						if (!isCaptureConsoleExisting) {
 							def scriptPath = "${repoPath}/modules/OrderCaptureModule/Console/_scripts/postDeploy.sh"
 							if (fileExists(scriptPath)) {
 								echo "Executing ${scriptPath}"
@@ -241,15 +241,15 @@ pipeline {
 							}
 						}
 						
-						if (!isScheduleOrderExisting) {
-							def scriptPath = "${repoPath}/modules/OrderCaptureModule/OrderHistory/_scripts/postDeploy.sh"
+						if (!isOrderHistoryExisting) {
+							def scriptPath = "${repoPath}/modules/OrderCaptureModule/OrderHistoryOp/_scripts/postDeploy.sh"
 							if (fileExists(scriptPath)) {
 								echo "Executing ${scriptPath}"
 								sh "${scriptPath}"
 							}
 						}
 						
-						if (!isShipOrderExisting) {
+						if (!isSKUListExisting) {
 							def scriptPath = "${repoPath}/modules/OrderCaptureModule/SkuList/_scripts/postDeploy.sh"
 							if (fileExists(scriptPath)) {
 								echo "Executing ${scriptPath}"
@@ -257,7 +257,7 @@ pipeline {
 							}
 						}
 						
-						if (!isGetDataExisting) {
+						if (!isUserInfoExisting) {
 							def scriptPath = "${repoPath}/modules/OrderCaptureModule/UserInfo/_scripts/postDeploy.sh"
 							if (fileExists(scriptPath)) {
 								echo "Executing ${scriptPath}"
@@ -301,7 +301,7 @@ pipeline {
 					}
 					
 					if (params['Update Order History service'] && isOrderHistoryExisting) {
-						def scriptPath = "${repoPath}/modules/OrderCaptureModule/OrderHistory/_scripts/updateDeployment.sh"
+						def scriptPath = "${repoPath}/modules/OrderCaptureModule/OrderHistoryOp/_scripts/updateDeployment.sh"
 						if (fileExists(scriptPath)) {
 							echo "Executing ${scriptPath}"
 							sh "${scriptPath} \"${ordHistResConc}\" \"${ordHistProvConc}\""
