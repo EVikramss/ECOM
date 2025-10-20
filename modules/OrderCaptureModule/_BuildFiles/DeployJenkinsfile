@@ -89,7 +89,7 @@ pipeline {
 					isItemInfoExisting = checkIfExisting(scriptPath)
 					areAllServicesExisting = areAllServicesExisting && isItemInfoExisting
 					
-					if (params['Deploy Order Management Module']) {
+					if (params['Deploy Order Capture Module']) {
 						runCDK = true
 					}
 				}
