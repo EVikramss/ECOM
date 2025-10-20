@@ -82,7 +82,7 @@
 	</dependencies>
 
 	<build>
-		<finalName>GetSkuList</finalName>
+		<finalName>SkuList</finalName>
 		<plugins>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
