@@ -2,7 +2,7 @@ import axios from 'axios';
 import config from '../common/config.json';
 
 export function fetchSKUList(searchParams) {
-    return axios.get(appendSearchParams(config.skuURL, searchParams));
+    return axios.get(appendSearchParams(config.skuURL + "/getSkuList", searchParams));
 }
 
 function appendSearchParams(url, searchParams) {

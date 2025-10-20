@@ -113,7 +113,6 @@ import software.amazon.awscdk.services.lambda.Function;
 import software.amazon.awscdk.services.lambda.Runtime;
 import software.amazon.awscdk.services.logs.LogGroup;
 import software.amazon.awscdk.services.logs.RetentionDays;
-import software.amazon.awscdk.services.rds.DatabaseCluster;
 import software.amazon.awscdk.services.s3.BlockPublicAccess;
 import software.amazon.awscdk.services.s3.Bucket;
 import software.amazon.awscdk.services.s3.BucketProps;
@@ -496,10 +495,10 @@ public class CdkStack extends Stack {
 				.build();
 
 		List<IManagedPolicy> taskPolicies = List.of(ManagedPolicy.fromAwsManagedPolicyName("SecretsManagerReadWrite"),
-           ManagedPolicy.fromAwsManagedPolicyName("AmazonS3ReadOnlyAccess"));
+				ManagedPolicy.fromAwsManagedPolicyName("AmazonS3ReadOnlyAccess"));
 		Role taskRole = Role.Builder.create(this, jobName + "TskRole")
 				.assumedBy(new ServicePrincipal("ecs-tasks.amazonaws.com")).managedPolicies(taskPolicies).build();
-      websiteBucket.grantRead(taskRole);
+		websiteBucket.grantRead(taskRole);
 
 		// create task definition along with log group
 		Ec2TaskDefinition taskDefinition = Ec2TaskDefinition.Builder.create(this, jobName + "TskDef")
@@ -575,7 +574,7 @@ public class CdkStack extends Stack {
 						.allowHeaders(List.of("Content-Type", "origin", "accept")).maxAge(Duration.days(10)).build())
 				.build();
 
-		ecsHTTPApi.addRoutes(AddRoutesOptions.builder().path("/getSkuList").methods(List.of(HttpMethod.POST))
+		ecsHTTPApi.addRoutes(AddRoutesOptions.builder().path("/getSkuList").methods(List.of(HttpMethod.GET))
 				.integration(albIntegration).build());
 	}
 
