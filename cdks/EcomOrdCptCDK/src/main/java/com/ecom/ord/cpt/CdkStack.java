@@ -495,9 +495,11 @@ public class CdkStack extends Stack {
 								ManagedPolicy.fromAwsManagedPolicyName("AmazonS3ReadOnlyAccess")))
 				.build();
 
-		List<IManagedPolicy> taskPolicies = List.of(ManagedPolicy.fromAwsManagedPolicyName("SecretsManagerReadWrite"));
+		List<IManagedPolicy> taskPolicies = List.of(ManagedPolicy.fromAwsManagedPolicyName("SecretsManagerReadWrite"),
+           ManagedPolicy.fromAwsManagedPolicyName("AmazonS3ReadOnlyAccess"));
 		Role taskRole = Role.Builder.create(this, jobName + "TskRole")
 				.assumedBy(new ServicePrincipal("ecs-tasks.amazonaws.com")).managedPolicies(taskPolicies).build();
+      websiteBucket.grantRead(taskRole);
 
 		// create task definition along with log group
 		Ec2TaskDefinition taskDefinition = Ec2TaskDefinition.Builder.create(this, jobName + "TskDef")
