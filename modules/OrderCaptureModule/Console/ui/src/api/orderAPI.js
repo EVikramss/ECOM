@@ -5,14 +5,10 @@ import {
 } from './queries/Queries.js'
 
 export function postOrder(authInfo, orderJson) {
-    axios.post(config.orderURL, orderJson, {
+    return axios.post(config.orderURL, orderJson, {
         headers: {
             Authorization: authInfo.user.access_token
         }
-    }).then(result => {
-        console.log(result);
-    }).catch(error => {
-        console.log(error);
     });
 }
 
