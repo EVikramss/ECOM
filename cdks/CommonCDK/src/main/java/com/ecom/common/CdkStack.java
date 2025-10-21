@@ -8,8 +8,6 @@ import software.amazon.awscdk.CfnOutput;
 import software.amazon.awscdk.Duration;
 import software.amazon.awscdk.Stack;
 import software.amazon.awscdk.StackProps;
-import software.amazon.awscdk.aws_apigatewayv2_integrations.HttpAlbIntegration;
-import software.amazon.awscdk.services.apigatewayv2.HttpMethod;
 import software.amazon.awscdk.services.apigatewayv2.VpcLink;
 import software.amazon.awscdk.services.autoscaling.AutoScalingGroup;
 import software.amazon.awscdk.services.ec2.CfnRoute;
@@ -41,10 +39,7 @@ import software.amazon.awscdk.services.ecs.AsgCapacityProvider;
 import software.amazon.awscdk.services.ecs.CapacityProviderStrategy;
 import software.amazon.awscdk.services.ecs.Cluster;
 import software.amazon.awscdk.services.ecs.EcsOptimizedImage;
-import software.amazon.awscdk.services.elasticloadbalancingv2.ApplicationListener;
 import software.amazon.awscdk.services.elasticloadbalancingv2.ApplicationLoadBalancer;
-import software.amazon.awscdk.services.elasticloadbalancingv2.ApplicationProtocol;
-import software.amazon.awscdk.services.elasticloadbalancingv2.BaseApplicationListenerProps;
 import software.amazon.awscdk.services.iam.Effect;
 import software.amazon.awscdk.services.iam.ManagedPolicy;
 import software.amazon.awscdk.services.iam.PolicyStatement;
@@ -128,6 +123,10 @@ public class CdkStack extends Stack {
 				.build();
 		ecsInstanceRole.addManagedPolicy(ManagedPolicy.fromAwsManagedPolicyName("AmazonEC2ContainerRegistryReadOnly"));
 
+		// select first 2 subnets for setting up ecs
+		List<ISubnet> privateSubnets = vpc.getIsolatedSubnets();
+		List<ISubnet> subPrivateSubnets = List.of(privateSubnets.get(0), privateSubnets.get(1));
+
 		// create ECS cluster
 		cluster = Cluster.Builder.create(this, "ECOMECSCluster").clusterName("ECOMECSCluster").containerInsights(false)
 				.vpc(vpc).build();
@@ -139,7 +138,7 @@ public class CdkStack extends Stack {
 		asg = AutoScalingGroup.Builder.create(this, "ECOMECSASG").vpc(vpc)
 				.instanceType(InstanceType.of(InstanceClass.BURSTABLE3, InstanceSize.MEDIUM))
 				.machineImage(EcsOptimizedImage.amazonLinux2()).minCapacity(2).maxCapacity(4).securityGroup(asgsg)
-				.vpcSubnets(SubnetSelection.builder().subnetType(SubnetType.PRIVATE_ISOLATED).build())
+				.vpcSubnets(SubnetSelection.builder().subnets(subPrivateSubnets).build())
 				.associatePublicIpAddress(false).build();
 
 		// register asg as capacity provider for ECS
@@ -162,8 +161,6 @@ public class CdkStack extends Stack {
 
 		// create endpoints to communicate with ecs & cloudwatch logs - use same sg for
 		// all endpoints
-		List<ISubnet> privateSubnets = vpc.getIsolatedSubnets();
-		List<ISubnet> subPrivateSubnets = List.of(privateSubnets.get(0), privateSubnets.get(1));
 		ecsepsg = new SecurityGroup(this, "ECSEPSecurityGroup",
 				SecurityGroupProps.builder().vpc(vpc).allowAllOutbound(false).build());
 		ecsepsg.addIngressRule(asgsg, Port.HTTPS);
@@ -200,9 +197,11 @@ public class CdkStack extends Stack {
 
 		// need s3 endpoint to pull image from ecr
 		GatewayVpcEndpoint s3Endpoint = GatewayVpcEndpoint.Builder.create(this, "S3GatewayEndpoint").vpc(vpc)
+				.subnets(List.of(SubnetSelection.builder().subnets(subPrivateSubnets).build()))
 				.service(GatewayVpcEndpointAwsService.S3).build();
-		
+
 		GatewayVpcEndpoint dynDBEndpoint = GatewayVpcEndpoint.Builder.create(this, "DynDBGatewayEndpoint").vpc(vpc)
+				.subnets(List.of(SubnetSelection.builder().subnets(subPrivateSubnets).build()))
 				.service(GatewayVpcEndpointAwsService.DYNAMODB).build();
 
 		// need log endpoint to write logs to log group
@@ -250,7 +249,7 @@ public class CdkStack extends Stack {
 		PolicyStatement getObjectStatement = PolicyStatement.Builder.create().effect(Effect.ALLOW)
 				.principals(List.of(new ServicePrincipal("amplify.amazonaws.com"))).actions(List.of("s3:GetObject"))
 				.resources(List.of(ecomBucket.getBucketArn() + "/ordmgm/ui/*")).build();
-		
+
 		BucketPolicy bucketPolicy = new BucketPolicy(this, "ECOMBucketPolicy",
 				BucketPolicyProps.builder().bucket(ecomBucket).build());
 
