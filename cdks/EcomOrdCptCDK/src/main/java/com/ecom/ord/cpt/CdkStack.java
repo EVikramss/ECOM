@@ -16,6 +16,8 @@ import software.amazon.awscdk.services.apigateway.AuthorizationType;
 import software.amazon.awscdk.services.apigateway.AwsIntegration;
 import software.amazon.awscdk.services.apigateway.CognitoUserPoolsAuthorizer;
 import software.amazon.awscdk.services.apigateway.CorsOptions;
+import software.amazon.awscdk.services.apigateway.EndpointConfiguration;
+import software.amazon.awscdk.services.apigateway.EndpointType;
 import software.amazon.awscdk.services.apigateway.Integration;
 import software.amazon.awscdk.services.apigateway.IntegrationOptions;
 import software.amazon.awscdk.services.apigateway.IntegrationResponse;
@@ -233,6 +235,7 @@ public class CdkStack extends Stack {
 				.build();
 
 		qapi = RestApi.Builder.create(this, "QApi").restApiName("CreateOrderQApi")
+				.endpointConfiguration(EndpointConfiguration.builder().types(List.of(EndpointType.EDGE)).build())
 				.defaultCorsPreflightOptions(CorsOptions.builder().allowCredentials(false).allowOrigins(List.of("*"))
 						.allowMethods(List.of(CorsHttpMethod.POST.toString()))
 						.allowHeaders(List.of("Content-Type", "origin", "accept", "Authorization"))
@@ -321,6 +324,7 @@ public class CdkStack extends Stack {
 
 	private void createAPIGWForItemInfoService(String baseDir, ITable itemInfoTable) {
 		itemInfoApi = RestApi.Builder.create(this, "ItemInfoAPI").restApiName("ItemInfoAPI")
+				.endpointConfiguration(EndpointConfiguration.builder().types(List.of(EndpointType.EDGE)).build())
 				.defaultCorsPreflightOptions(CorsOptions.builder().allowCredentials(false).allowOrigins(List.of("*"))
 						.allowMethods(List.of(CorsHttpMethod.GET.toString()))
 						.allowHeaders(List.of("Content-Type", "origin", "accept")).maxAge(Duration.days(10)).build())
@@ -332,7 +336,7 @@ public class CdkStack extends Stack {
 		itemInfoTable.grantReadData(itemInfoRole);
 
 		AwsIntegration apigwIntegration = AwsIntegration.Builder.create().service("dynamodb")
-				.integrationHttpMethod("POST").path("dynamodb/" + Stack.of(this).getRegion())
+				.integrationHttpMethod("POST").action("Query")
 				.options(IntegrationOptions.builder().credentialsRole(itemInfoRole)
 						.requestTemplates(Map.of("application/json", "{\n" + "  \"TableName\": \"ItemInfo\",\n"
 								+ "  \"KeyConditionExpression\": \"itemID = :itemId and infoType = :infoType\",\n"
@@ -340,15 +344,25 @@ public class CdkStack extends Stack {
 								+ "    \":itemId\": { \"S\": \"$input.params('itemID')\" },\n"
 								+ "    \":infoType\": { \"S\": \"$input.params('infoType')\" }\n" + "  }\n" + "}"))
 						.integrationResponses(List.of(IntegrationResponse.builder().statusCode("200")
-								.responseTemplates(Map.of("application/json",
-										"#set($allParams = $input.params())\n" + "{\n"
-												+ "\"body-json\" : $input.json('$')\n" + "}"))
+								.responseParameters(Map.of("method.response.header.Access-Control-Allow-Origin", "'*'"))
+								.responseTemplates(Map.of("application/json", "#set($allParams = $input.params())\n"
+										+ "{\n" + "	\"body-json\" : $input.json('$'),\n" + "	\"params\" : {\n"
+										+ "		#foreach($type in $allParams.keySet())\n"
+										+ "			#set($params = $allParams.get($type))\n" + "		\"$type\" : {\n"
+										+ "			#foreach($paramName in $params.keySet())\n"
+										+ "			\"$paramName\" : \"$util.escapeJavaScript($params.get($paramName))\"\n"
+										+ "				#if($foreach.hasNext),#end\n" + "			#end\n" + "		}\n"
+										+ "			#if($foreach.hasNext),#end\n" + "		#end\n" + "	}\n" + "}"))
 								.build()))
 						.build())
 				.build();
 
-		infoResource.addMethod("GET", apigwIntegration, MethodOptions.builder()
-				.methodResponses(List.of(MethodResponse.builder().statusCode("200").build())).build());
+		infoResource.addMethod("GET", apigwIntegration,
+				MethodOptions.builder()
+						.methodResponses(List.of(MethodResponse.builder().statusCode("200")
+								.responseParameters(Map.of("method.response.header.Access-Control-Allow-Origin", true))
+								.build()))
+						.build());
 	}
 
 	private void createAppSyncForItemInfoService(String baseDir, ITable itemInfoTable) {
@@ -570,7 +584,7 @@ public class CdkStack extends Stack {
 		// Create HTTP API using albIntegration - allow cors
 		ecsHTTPApi = HttpApi.Builder.create(this, "GetSkuListHttpApi")
 				.corsPreflight(CorsPreflightOptions.builder().allowCredentials(false).allowOrigins(List.of("*"))
-						.allowMethods(List.of(CorsHttpMethod.GET, CorsHttpMethod.POST))
+						.allowMethods(List.of(CorsHttpMethod.GET, CorsHttpMethod.POST, CorsHttpMethod.OPTIONS))
 						.allowHeaders(List.of("Content-Type", "origin", "accept")).maxAge(Duration.days(10)).build())
 				.build();
 

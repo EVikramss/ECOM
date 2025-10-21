@@ -133,7 +133,7 @@ export function clearCart(auth) {
     }
 }
 
-export function addToCart(itemData, auth) {
+export function addToCart(newItem, auth) {
     return function (dispatch, getState) {
         const cartItems = getState().cartItems;
         let updatedCart = { ...cartItems };
@@ -182,7 +182,7 @@ export function changeCartQty(itemID, deltaQty, auth) {
         // get updated cart
         if (itemID in updatedCart) {
             let existingItem = updatedCart[itemID];
-            existingItem.orderQty = existingItem.orderQty + changeInQty;
+            existingItem.orderQty = existingItem.orderQty + deltaQty;
         }
 
         // store updated cart

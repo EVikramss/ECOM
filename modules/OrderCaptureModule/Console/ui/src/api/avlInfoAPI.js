@@ -3,7 +3,7 @@ import config from '../common/config.json';
 
 export function getSKUAvailability(skuID) {
     const infoType = config.entity;
-    let urlVal = config.itemInfoURL + "/info?itemID=" + skuID + "&infoType=" + infoType;
+    let urlVal = config.itemInfoURL + "info?itemID=" + skuID + "&infoType=" + infoType;
 
     return axios.get(urlVal);
 }
