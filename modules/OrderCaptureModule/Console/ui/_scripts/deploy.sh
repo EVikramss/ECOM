@@ -21,7 +21,7 @@ ITEMINFOURL=$(aws cloudformation describe-stacks --stack-name ECOMORDCPT --query
 SNSAPIURL=$(aws cloudformation describe-stacks --stack-name ECOMORDCPT --query "Stacks[0].Outputs[?OutputKey=='SNSAPIURL'].OutputValue" --output text)
 SKULISTEP=$(aws cloudformation describe-stacks --stack-name ECOMORDCPT --query "Stacks[0].Outputs[?OutputKey=='SKULISTEP'].OutputValue" --output text)
 
-SKUCLDFRDMN=$(aws cloudformation describe-stacks --stack-name ECOMORDCPT --query "Stacks[0].Outputs[?OutputKey=='SKUCLDFRDMN'].OutputValue" --output text) 
+SKUCLDFRDMN=$(aws cloudformation describe-stacks --stack-name ECOMORDCPT --query "Stacks[0].Outputs[?OutputKey=='CLOUDFRONTDOMAIN'].OutputValue" --output text) 
 CLDSKUURL=$(echo "https://$SKUCLDFRDMN" | awk '{print tolower($0)}')
 
 # update url's in ui

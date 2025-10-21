@@ -16,7 +16,7 @@ SNSAPIURL=$(aws cloudformation describe-stacks --stack-name ECOMORDCPT --query "
 SKULISTEP=$(aws cloudformation describe-stacks --stack-name ECOMORDCPT --query "Stacks[0].Outputs[?OutputKey=='SKULISTEP'].OutputValue" --output text)
 cognitoURL="https://cognito-idp.us-east-1.amazonaws.com/$client_pool_id"
 
-SKUCLDFRDMN=$(aws cloudformation describe-stacks --stack-name ECOMORDCPT --query "Stacks[0].Outputs[?OutputKey=='SKUCLDFRDMN'].OutputValue" --output text) 
+SKUCLDFRDMN=$(aws cloudformation describe-stacks --stack-name ECOMORDCPT --query "Stacks[0].Outputs[?OutputKey=='CLOUDFRONTDOMAIN'].OutputValue" --output text) 
 CLDSKUURL=$(echo "https://$SKUCLDFRDMN" | awk '{print tolower($0)}')
 
 # update url's in ui

@@ -19,7 +19,6 @@ import software.amazon.awscdk.services.apigateway.CognitoUserPoolsAuthorizer;
 import software.amazon.awscdk.services.apigateway.CorsOptions;
 import software.amazon.awscdk.services.apigateway.EndpointConfiguration;
 import software.amazon.awscdk.services.apigateway.EndpointType;
-import software.amazon.awscdk.services.apigateway.HttpIntegration;
 import software.amazon.awscdk.services.apigateway.Integration;
 import software.amazon.awscdk.services.apigateway.IntegrationOptions;
 import software.amazon.awscdk.services.apigateway.IntegrationResponse;
@@ -53,6 +52,7 @@ import software.amazon.awscdk.services.cloudfront.Distribution;
 import software.amazon.awscdk.services.cloudfront.DistributionProps;
 import software.amazon.awscdk.services.cloudfront.IOrigin;
 import software.amazon.awscdk.services.cloudfront.OriginAccessIdentity;
+import software.amazon.awscdk.services.cloudfront.ResponseHeadersPolicy;
 import software.amazon.awscdk.services.cloudfront.ViewerProtocolPolicy;
 import software.amazon.awscdk.services.cloudfront.origins.HttpOrigin;
 import software.amazon.awscdk.services.cloudfront.origins.S3BucketOrigin;
@@ -92,7 +92,6 @@ import software.amazon.awscdk.services.ecs.AwsLogDriverProps;
 import software.amazon.awscdk.services.ecs.CloudMapOptions;
 import software.amazon.awscdk.services.ecs.Cluster;
 import software.amazon.awscdk.services.ecs.ClusterAttributes;
-import software.amazon.awscdk.services.ecs.ContainerDefinition;
 import software.amazon.awscdk.services.ecs.ContainerDefinitionOptions;
 import software.amazon.awscdk.services.ecs.ContainerImage;
 import software.amazon.awscdk.services.ecs.Ec2Service;
@@ -112,7 +111,6 @@ import software.amazon.awscdk.services.elasticloadbalancingv2.TargetType;
 import software.amazon.awscdk.services.iam.IManagedPolicy;
 import software.amazon.awscdk.services.iam.IRole;
 import software.amazon.awscdk.services.iam.ManagedPolicy;
-import software.amazon.awscdk.services.iam.PolicyStatement;
 import software.amazon.awscdk.services.iam.Role;
 import software.amazon.awscdk.services.iam.ServicePrincipal;
 import software.amazon.awscdk.services.lambda.Function;
@@ -154,7 +152,6 @@ public class CdkStack extends Stack {
 	private Bucket websiteBucket;
 	private IBucket bucket;
 	private Distribution distribution;
-	private Distribution distributionAPI;
 	private GraphqlApi userInfoApi;
 	private RestApi itemInfoApi;
 	private RestApi qapi;
@@ -219,12 +216,6 @@ public class CdkStack extends Stack {
 		createOrderTopic = Topic.Builder.create(this, "CreateOrderTopic").topicName("CreateOrderTopic").build();
 		createOrderTopic.addSubscription(new SqsSubscription(createOrderQ));
 
-		// add policy to sqs to allow posting from sns
-		createOrderQ.addToResourcePolicy(PolicyStatement.Builder.create().actions(List.of("sqs:SendMessage"))
-				.principals(List.of(new ServicePrincipal("sns.amazonaws.com")))
-				.resources(List.of(createOrderQ.getQueueArn()))
-				.conditions(Map.of("ArnEquals", Map.of("aws:SourceArn", createOrderTopic.getTopicArn()))).build());
-
 		// similar to
 		// https://docs.aws.amazon.com/prescriptive-guidance/latest/patterns/integrate-amazon-api-gateway-with-amazon-sqs-to-handle-asynchronous-rest-apis.html
 		Role apiRole = Role.Builder.create(this, "APIRole").assumedBy(new ServicePrincipal("apigateway.amazonaws.com"))
@@ -241,6 +232,7 @@ public class CdkStack extends Stack {
 										+ String.format("arn:aws:sns:us-east-1:%s:CreateOrderTopic", Aws.ACCOUNT_ID)
 										+ "&Message=$util.urlEncode($input.body)"))
 						.integrationResponses(List.of(IntegrationResponse.builder().statusCode("200")
+								.responseParameters(Map.of("method.response.header.Access-Control-Allow-Origin", "'*'"))
 								.responseTemplates(Map.of("application/json", "{\"success\": true}")).build()))
 						.build())
 				.build();
@@ -253,15 +245,18 @@ public class CdkStack extends Stack {
 						.maxAge(Duration.days(10)).build())
 				.build();
 
-		qapi.getRoot().addMethod("POST", snsIntegration,
-				MethodOptions.builder()
-						.methodResponses(List.of(
-								MethodResponse.builder().statusCode("200")
-										.responseModels(Map.of("application/json", Model.EMPTY_MODEL)).build(),
-								MethodResponse.builder().statusCode("400")
-										.responseModels(Map.of("application/json", Model.EMPTY_MODEL)).build()))
-						.authorizationType(AuthorizationType.COGNITO).authorizer(authorizer)
-						.authorizationScopes(List.of("email", "openid")).build());
+		qapi.getRoot()
+				.addMethod("POST", snsIntegration,
+						MethodOptions.builder()
+								.methodResponses(List.of(
+										MethodResponse.builder().statusCode("200")
+												.responseParameters(Map
+														.of("method.response.header.Access-Control-Allow-Origin", true))
+												.responseModels(Map.of("application/json", Model.EMPTY_MODEL)).build(),
+										MethodResponse.builder().statusCode("400")
+												.responseModels(Map.of("application/json", Model.EMPTY_MODEL)).build()))
+								.authorizationType(AuthorizationType.COGNITO).authorizer(authorizer)
+								.authorizationScopes(List.of("email", "openid")).build());
 	}
 
 	private void setupOrderConsole(String baseDir) {
@@ -373,6 +368,7 @@ public class CdkStack extends Stack {
 						.build());
 	}
 
+	@SuppressWarnings("unused")
 	private void createAppSyncForItemInfoService(String baseDir, ITable itemInfoTable) {
 		// app sync for dynamodb
 		GraphqlApi itemInfoApi = GraphqlApi.Builder.create(this, "ItemInfoApi").name("ItemInfoApi")
@@ -543,8 +539,8 @@ public class CdkStack extends Stack {
 
 		// define container along with rds secret
 		String imageURI = System.getenv("ECRREPO") + ":" + jobName.toLowerCase();
-		ContainerDefinition container = taskDefinition.addContainer(jobName + "Container", ContainerDefinitionOptions
-				.builder().image(ContainerImage.fromRegistry(imageURI)).memoryLimitMiB(mem).cpu(cpu)
+		taskDefinition.addContainer(jobName + "Container", ContainerDefinitionOptions.builder()
+				.image(ContainerImage.fromRegistry(imageURI)).memoryLimitMiB(mem).cpu(cpu)
 				.portMappings(List.of(PortMapping.builder().containerPort(8080).build()))
 				.logging(LogDriver.awsLogs(AwsLogDriverProps.builder().logGroup(logGroup).streamPrefix("ecom").build()))
 				.environment(Map.of("bucketName", bucket.getBucketName())).build());
@@ -592,7 +588,7 @@ public class CdkStack extends Stack {
 		// Create HTTP API using albIntegration - allow cors
 		ecsHTTPApi = HttpApi.Builder.create(this, "GetSkuListHttpApi")
 				.corsPreflight(CorsPreflightOptions.builder().allowCredentials(false).allowOrigins(List.of("*"))
-						.allowMethods(List.of(CorsHttpMethod.GET, CorsHttpMethod.POST, CorsHttpMethod.OPTIONS))
+						.allowMethods(List.of(CorsHttpMethod.GET))
 						.allowHeaders(List.of("Content-Type", "origin", "accept")).maxAge(Duration.days(10)).build())
 				.build();
 
@@ -601,13 +597,13 @@ public class CdkStack extends Stack {
 
 		// Using cloudfront distribution as restapi doesnt use apigateway v2, which
 		// allows alb. For restapi need to create nlb ...
-		distributionAPI = new Distribution(this, "OrderSKUDistribution", DistributionProps.builder()
-				.defaultBehavior(software.amazon.awscdk.services.cloudfront.BehaviorOptions.builder()
-						.origin(HttpOrigin.Builder.create(Fn.select(2, Fn.split("/", ecsHTTPApi.getApiEndpoint())))
-								.build())
+		distribution.addBehavior("/getSkuList",
+				HttpOrigin.Builder.create(Fn.select(2, Fn.split("/", ecsHTTPApi.getApiEndpoint()))).build(),
+				software.amazon.awscdk.services.cloudfront.BehaviorOptions.builder()
+						.responseHeadersPolicy(
+								ResponseHeadersPolicy.CORS_ALLOW_ALL_ORIGINS_WITH_PREFLIGHT_AND_SECURITY_HEADERS)
 						.cachePolicy(CachePolicy.CACHING_OPTIMIZED)
-						.viewerProtocolPolicy(ViewerProtocolPolicy.REDIRECT_TO_HTTPS).build())
-				.build());
+						.viewerProtocolPolicy(ViewerProtocolPolicy.REDIRECT_TO_HTTPS).build());
 	}
 
 	private void lookupNetwork() {
@@ -653,7 +649,6 @@ public class CdkStack extends Stack {
 		if (ecsHTTPApi != null) {
 			CfnOutput.Builder.create(this, "SKULISTEP").value(ecsHTTPApi.getApiEndpoint()).build();
 			CfnOutput.Builder.create(this, "SKULISTID").value(ecsHTTPApi.getApiId()).build();
-			CfnOutput.Builder.create(this, "SKUCLDFRDMN").value(distributionAPI.getDistributionDomainName()).build();
 		}
 	}
 }

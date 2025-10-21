@@ -2,6 +2,7 @@ package com.ecom.common;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 import software.amazon.awscdk.CfnOutput;
@@ -109,6 +110,12 @@ public class CdkStack extends Stack {
 	private void setupSQS() {
 		createOrderQ = Queue.Builder.create(this, "CreateOrderQ").queueName("CreateOrderQ")
 				.retentionPeriod(Duration.days(1)).build();
+
+		// add policy to sqs to allow posting from sns
+		createOrderQ.addToResourcePolicy(PolicyStatement.Builder.create().actions(List.of("sqs:SendMessage"))
+				.principals(List.of(new ServicePrincipal("sns.amazonaws.com")))
+				.resources(List.of(createOrderQ.getQueueArn()))
+				.conditions(Map.of("ArnLike", Map.of("aws:SourceArn", "arn:aws:sns:*:*:*"))).build());
 	}
 
 	/**
