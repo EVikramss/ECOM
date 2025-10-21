@@ -36,7 +36,7 @@ rm -rf node_modules/*
 # copy built files to s3 bucket
 s3bucket_arn=$(aws cloudformation describe-stacks --stack-name ECOMORDCPT --query "Stacks[0].Outputs[?OutputKey=='WEBBUCKET'].OutputValue" --output text)
 s3bucket="${s3bucket_arn##*:}"
-aws s3 rm "s3://$s3bucket/ordcpt/ui/" --recursive
+aws s3 rm "s3://$s3bucket/ordcpt/ui/" --recursive --exclude "images/*"
 aws s3 cp ./dist/ "s3://$s3bucket/ordcpt/ui/" --recursive
 
 # clear cloudfront cache
