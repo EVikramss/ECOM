@@ -9,6 +9,7 @@ import { useAuth } from "react-oidc-context";
 import 'react-toastify/dist/ReactToastify.css';
 import { getSKUAvailability } from '../api/avlInfoAPI';
 import { apiCallError, beginApiCall, endApiCall } from '../redux/actions/apiBoundaryActions';
+import config from '../common/config.json';
 
 function ItemDetail() {
     const { state } = useLocation();
@@ -93,7 +94,7 @@ function ItemDetail() {
                     <div className="w-full">
                         <div className="overflow-hidden rounded-2xl bg-gray-100 shadow-sm ring-1 ring-gray-200">
                             <img
-                                src={imgurl}
+                                src={config.staticContentPrefix + imgurl}
                                 alt={desc}
                                 className="h-full w-full object-cover object-center"
                             />
