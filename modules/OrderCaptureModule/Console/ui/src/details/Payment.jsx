@@ -1,10 +1,9 @@
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import React, { useEffect } from 'react';
 import config from '../common/config.json';
 import { useAuth } from "react-oidc-context";
 import { useNavigate } from 'react-router-dom';
 import { exportOrder } from '../redux/actions/orderActions';
-import { useDispatch, useSelector } from "react-redux";
 
 function Payment() {
     const cartItems = useSelector((state) => state.cartState.cartItems);
