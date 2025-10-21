@@ -122,7 +122,7 @@ function Cart() {
                                                 </div>
 
                                                 <p className="mt-1 text-xs text-gray-500">
-                                                    {availability === 'InStock' ? 'In stock' : 'Out of stock'}
+                                                    {availability ? availability === 'InStock' ? 'In stock' : 'Out of stock' : ''}
                                                 </p>
 
                                                 <div className="mt-4 flex flex-1 items-end justify-between">

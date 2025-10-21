@@ -17,8 +17,7 @@ function ItemDetail() {
     const navigate = useNavigate();
     const auth = useAuth();
 
-    const [qty, setQty] = useState(1);
-    const [inStock, setInStock] = useState(-1);
+    const cartItems = useSelector(state => state.cartState.cartItems);
 
     const itemData = state.data;
     const {
@@ -30,6 +29,18 @@ function ItemDetail() {
         desc,
         imgUrl,
     } = itemData;
+
+    const [selectedQty, setSelectedQty] = useState(1);
+    const [inStock, setInStock] = useState(-1);
+    const [orderQty, setOrderQty] = useState(0);
+
+    useEffect(() => {
+        if (itemID in cartItems) {
+            if (cartItems[itemID].orderQty) {
+                setOrderQty(cartItems[itemID].orderQty);
+            }
+        }
+    }, [cartItems]);
 
     // fetch availability for item
     useEffect(() => {
@@ -53,11 +64,6 @@ function ItemDetail() {
         });
     }, []);
 
-    const cartItems = useSelector(state => state.cartState.cartItems);
-    let orderQty = 0;
-    if (itemID in cartItems)
-        orderQty = cartItems[itemID].orderQty;
-
     const fmt = useMemo(
         () =>
             new Intl.NumberFormat("en-IN", {
@@ -69,13 +75,7 @@ function ItemDetail() {
     );
 
     const onAddToCart = () => {
-        let totalQty = orderQty + qty;
-        if (totalQty > maxQty) {
-            toast.error("Total order quantity limited to " + maxQty);
-        } else {
-            itemData.orderQty = qty;
-            dispatch(addToCart(itemData, auth));
-        }
+        dispatch(addToCart(itemData, auth, selectedQty));
     };
 
     return (
@@ -125,14 +125,14 @@ function ItemDetail() {
 
                         {/* Quantity + Actions */}
                         <div className="mb-8">
-                            <label htmlFor="qty" className="block text-sm font-medium text-gray-900">
+                            <label htmlFor="selectedQty" className="block text-sm font-medium text-gray-900">
                                 Quantity
                             </label>
                             <div className="mt-2 flex items-center gap-3">
                                 <select
-                                    id="qty"
-                                    value={qty}
-                                    onChange={(e) => setQty(Number(e.target.value))}
+                                    id="selectedQty"
+                                    value={selectedQty}
+                                    onChange={(e) => setSelectedQty(Number(e.target.value))}
                                     className="block w-28 rounded-md border-0 bg-white py-2 pl-3 pr-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-indigo-600 sm:text-sm"
                                     disabled={inStock != 1}
                                 >

@@ -133,24 +133,29 @@ export function clearCart(auth) {
     }
 }
 
-export function addToCart(newItem, auth) {
+// invoked from ItemDetails page
+export function addToCart(newItem, auth, qty) {
     return function (dispatch, getState) {
-        const cartItems = getState().cartItems;
-        let updatedCart = { ...cartItems };
-        let itemID = newItem.itemID
+        const cartItems = getState().cartState.cartItems;
+        const updatedCart = JSON.parse(JSON.stringify(cartItems));
+        const itemID = newItem.itemID;
 
         // if item existing, add qty and check against max qty limit
+        let updatedItem = null;
         if (itemID in updatedCart) {
-            let existingItem = updatedCart[itemID];
-            let newQty = existingItem.orderQty + newItem.orderQty;
-            let maxQty = existingItem.maxQty;
-            if (newQty > maxQty) {
-                newQty = maxQty;
-            }
-            existingItem.orderQty = newQty;
+            updatedItem = updatedCart[itemID];
         } else {
-            updatedCart[itemID] = newItem;
+            updatedItem = { ...newItem };
+            updatedItem.orderQty = 0;
         }
+
+        let newQty = updatedItem.orderQty + qty;
+        if (updatedItem.maxQty && newQty > updatedItem.maxQty) {
+            newQty = updatedItem.maxQty;
+            toast.error("Total order quantity limited to " + updatedItem.maxQty);
+        }
+        updatedItem.orderQty = newQty;
+        updatedCart[itemID] = updatedItem;
 
         // store updated cart
         storeCart(dispatch, getState, updatedCart, auth);
@@ -160,8 +165,8 @@ export function addToCart(newItem, auth) {
 
 export function removeFromCart(itemID, auth) {
     return function (dispatch, getState) {
-        const cartItems = getState().cartItems;
-        let updatedCart = { ...cartItems };
+        const cartItems = getState().cartState.cartItems;
+        let updatedCart = JSON.parse(JSON.stringify(cartItems));
 
         // if item existing, add qty and check against max qty limit
         if (itemID in updatedCart) {
@@ -176,8 +181,8 @@ export function removeFromCart(itemID, auth) {
 
 export function changeCartQty(itemID, deltaQty, auth) {
     return function (dispatch, getState) {
-        const cartItems = getState().cartItems;
-        let updatedCart = { ...cartItems };
+        const cartItems = getState().cartState.cartItems;
+        let updatedCart = JSON.parse(JSON.stringify(cartItems));
 
         // get updated cart
         if (itemID in updatedCart) {

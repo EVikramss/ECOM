@@ -39,3 +39,65 @@ export function fetchOrderNo(authInfo, navigate) {
             });
     };
 }
+
+export function exportOrder(authInfo, navigate) {
+    return function (dispatch, getState) {
+        const orderNo = getState().orderState.orderNo;
+        const userSelectedAddress = getState().userSelectedAddress;
+        const userAddress = Object.values(userSelectedAddress);
+
+        if (orderNo) {
+            // form orderJson
+            const orderJson = {};
+            const entity = "test";
+            const skuData = [];
+
+            orderJson["orderNo"] = orderNo;
+            orderJson["entity"] = entity;
+            orderJson["sub"] = authInfo.user.profile.sub;
+            orderJson["address"] = {
+                "country": "IND",
+                "city": userAddress.city,
+                "state": userAddress.state,
+                "addressline1": userAddress.addressLine1,
+                "addressline2": userAddress.addressLine2,
+                "pincode": userAddress.phone
+            };
+            orderJson["customerContact"] = {
+                "fullName": userAddress.fullName,
+                "phone": userAddress.phone,
+                "email": userAddress.email
+            };
+
+            for (let counter = 0; counter < itemsArray.length; counter++) {
+                let itemData = itemsArray[counter];
+                let orderSku = {};
+                orderSku["sku"] = itemData.itemID;
+                orderSku["qty"] = itemData.orderQty;
+                orderSku["price"] = itemData.price;
+                orderSku["taxCode"] = itemData.taxCode;
+                orderSku["desc"] = itemData.desc;
+                skuData.push(orderSku);
+            }
+            orderJson["itemData"] = skuData;
+
+            console.log(orderJson);
+            dispatch(beginApiCall());
+            orderAPI.postOrder(authInfo, orderJson)
+                .then(response => {
+                    if (response.status >= 200 && response.status < 300) {
+                        dispatch(markOrderExported());
+                        navigate("/confirmOrder");
+                    } else {
+                        toast.error("Error submitting your order. Try again");
+                    }
+                    dispatch(endApiCall());
+                }).catch(error => {
+                    toast.error("Error submitting your order. Try again");
+                    dispatch(apiCallError(error));
+                });
+        } else {
+            toast.error("Error reading orderNo. Checkout cart again");
+        }
+    };
+}

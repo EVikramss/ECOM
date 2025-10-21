@@ -4,68 +4,36 @@ import { useAuth } from "react-oidc-context";
 import * as orderAPI from '../api/orderAPI';
 import { clearCart } from '../redux/actions/cartActions';
 import { clearOrderNo } from '../redux/actions/orderActions';
+import '../common/Common.css';
 
 export default function OrderSummary() {
   const cartItems = useSelector((state) => state.cartState.cartItems);
   const userAddress = useSelector((state) => state.userSelectedAddress);
+  const orderState = useSelector((state) => state.orderState);
   const auth = useAuth();
   const dispatch = useDispatch();
+
+  const userAddressVal = Object.values(userAddress);
 
   const itemsArray = Object.values(cartItems);
   const totalAmount = itemsArray.reduce((sum, item) => sum + item.orderQty * parseFloat(item.price), 0);
 
   useEffect(() => {
-    const orderJson = {};
-    const orderNo = "test";
-    const entity = "test";
-    const skuData = [];
-
-    orderJson["orderNo"] = orderNo;
-    orderJson["entity"] = entity;
-    orderJson["address"] = {
-      "country": "IND",
-      "city": userAddress.city,
-      "state": userAddress.state,
-      "addressline1": userAddress.addressLine1,
-      "addressline2": userAddress.addressLine2,
-      "pincode": userAddress.phone
-    };
-    orderJson["customerContact"] = {
-      "fullName": userAddress.fullName,
-      "phone": userAddress.phone,
-      "email": userAddress.email
-    };
-
-    for (let counter = 0; counter < itemsArray.length; counter++) {
-      let itemData = itemsArray[counter];
-      let orderSku = {};
-      orderSku["sku"] = itemData.itemID;
-      orderSku["qty"] = itemData.orderQty;
-      orderSku["price"] = itemData.price;
-      orderSku["taxCode"] = itemData.taxCode;
-      orderSku["desc"] = itemData.desc;
-      skuData.push(orderSku);
-    }
-    orderJson["itemData"] = skuData;
-
-    console.log(orderJson);
-    orderAPI.postOrder(auth, orderJson);
-
     dispatch(clearCart(auth));
-    dispatch(clearOrderNo());
   }, []);
 
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-white shadow-md rounded-md">
+    <div className="max-w-4xl mx-auto p-6 bg-white shadow-md rounded-md headerSpacing">
       <h2 className="text-xl font-semibold text-gray-900 mb-6">Order Summary</h2>
+      <h3 className="text-xl font-semibold text-gray-900 mb-6">{orderState.orderNo}</h3>
 
       <div className="mb-8">
         <h3 className="text-lg font-medium text-gray-700 mb-2">Customer Info</h3>
         <div className="text-sm text-gray-600">
-          <p>{userAddress.firstName} {userAddress.lastName}</p>
-          <p>{userAddress.email}</p>
-          <p>{userAddress.phone}</p>
-          <p>{userAddress.address}, {userAddress.city}, {userAddress.region} - {userAddress.postalCode}</p>
+          <p>{userAddressVal.firstName} {userAddressVal.lastName}</p>
+          <p>{userAddressVal.email}</p>
+          <p>{userAddressVal.phone}</p>
+          <p>{userAddressVal.address}, {userAddressVal.city}, {userAddressVal.region} - {userAddressVal.postalCode}</p>
         </div>
       </div>
 
