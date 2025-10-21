@@ -1,14 +1,18 @@
 import { useSelector } from 'react-redux';
 import React, { useEffect } from 'react';
 import config from '../common/config.json';
+import { useAuth } from "react-oidc-context";
 import { useNavigate } from 'react-router-dom';
 import { exportOrder } from '../redux/actions/orderActions';
+import { useDispatch, useSelector } from "react-redux";
 
 function Payment() {
     const cartItems = useSelector((state) => state.cartState.cartItems);
     const itemsArray = Object.values(cartItems);
     const totalAmount = itemsArray.reduce((sum, item) => sum + item.orderQty * parseFloat(item.price), 0);
     const navigate = useNavigate();
+    const dispatch = useDispatch();
+    const auth = useAuth();
 
     const handleConfirmPayment = (e) => {
         e.preventDefault();
