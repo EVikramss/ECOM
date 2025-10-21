@@ -9,7 +9,7 @@ client_id=$(aws cloudformation describe-stacks --stack-name ECOMORDCPT --query "
 client_pool_id=$(aws cloudformation describe-stacks --stack-name ECOMORDCPT --query "Stacks[0].Outputs[?OutputKey=='ORDCAPUSERPOOLID'].OutputValue" --output text)
 CLOUDFRONTDOMAIN=$(aws cloudformation describe-stacks --stack-name ECOMORDCPT --query "Stacks[0].Outputs[?OutputKey=='CLOUDFRONTDOMAIN'].OutputValue" --output text)
 updated_callback_url=$(echo "https://$CLOUDFRONTDOMAIN/" | awk '{print tolower($0)}')
-static_content_url=$(echo "https://$CLOUDFRONTDOMAIN/ordcpt/ui/images/" | awk '{print tolower($0)}')
+static_content_url=$(echo "https://$CLOUDFRONTDOMAIN/images/" | awk '{print tolower($0)}')
 USERINFOGRPHURL=$(aws cloudformation describe-stacks --stack-name ECOMORDCPT --query "Stacks[0].Outputs[?OutputKey=='USERINFOGRPHURL'].OutputValue" --output text)
 ITEMINFOURL=$(aws cloudformation describe-stacks --stack-name ECOMORDCPT --query "Stacks[0].Outputs[?OutputKey=='ITEMINFOURL'].OutputValue" --output text)
 SNSAPIURL=$(aws cloudformation describe-stacks --stack-name ECOMORDCPT --query "Stacks[0].Outputs[?OutputKey=='SNSAPIURL'].OutputValue" --output text)

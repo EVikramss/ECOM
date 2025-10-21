@@ -10,7 +10,7 @@ client_pool_id=$(aws cloudformation describe-stacks --stack-name ECOMORDCPT --qu
 
 CLOUDFRONTDOMAIN=$(aws cloudformation describe-stacks --stack-name ECOMORDCPT --query "Stacks[0].Outputs[?OutputKey=='CLOUDFRONTDOMAIN'].OutputValue" --output text)
 updated_callback_url=$(echo "https://$CLOUDFRONTDOMAIN/" | awk '{print tolower($0)}')
-static_content_url=$(echo "https://$CLOUDFRONTDOMAIN/ordcpt/ui/images/" | awk '{print tolower($0)}')
+static_content_url=$(echo "https://$CLOUDFRONTDOMAIN/images/" | awk '{print tolower($0)}')
 
 aws cognito-idp update-user-pool-client --user-pool-id "$client_pool_id" --client-id "$client_id" --callback-urls "[\"$updated_callback_url\"]" --supported-identity-providers "[\"COGNITO\"]" --allowed-o-auth-flows "[\"code\"]" --allowed-o-auth-scopes "[\"phone\",\"openid\",\"email\"]" --allowed-o-auth-flows-user-pool-client --output text
 cognitoURL="https://cognito-idp.us-east-1.amazonaws.com/$client_pool_id"
@@ -49,6 +49,8 @@ cd "$SCRIPT_DIR/../../"
 mkdir /tmp/images
 unzip -q images.zip -d /tmp/images
 aws s3 cp /tmp/images/ "s3://$s3bucket/ordcpt/ui/images" --recursive
+
+updated_callback_url=$(echo "https://$CLOUDFRONTDOMAIN" | awk '{print tolower($0)}')
 
 # update api gateway allowed origin to cloudfront url
 SKULISTID=$(aws cloudformation describe-stacks --stack-name ECOMORDCPT --query "Stacks[0].Outputs[?OutputKey=='SKULISTID'].OutputValue" --output text)
