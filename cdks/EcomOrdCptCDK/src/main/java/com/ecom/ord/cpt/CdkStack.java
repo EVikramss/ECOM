@@ -601,7 +601,7 @@ public class CdkStack extends Stack {
 
 		// Using cloudfront distribution as restapi doesnt use apigateway v2, which
 		// allows alb. For restapi need to create nlb ...
-		distributionAPI = new Distribution(this, "OrderCapDistribution", DistributionProps.builder()
+		distributionAPI = new Distribution(this, "OrderSKUDistribution", DistributionProps.builder()
 				.defaultBehavior(software.amazon.awscdk.services.cloudfront.BehaviorOptions.builder()
 						.origin(HttpOrigin.Builder.create(Fn.select(2, Fn.split("/", ecsHTTPApi.getApiEndpoint())))
 								.build())
