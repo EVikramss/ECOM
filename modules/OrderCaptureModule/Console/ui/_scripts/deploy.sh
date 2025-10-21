@@ -21,8 +21,11 @@ ITEMINFOURL=$(aws cloudformation describe-stacks --stack-name ECOMORDCPT --query
 SNSAPIURL=$(aws cloudformation describe-stacks --stack-name ECOMORDCPT --query "Stacks[0].Outputs[?OutputKey=='SNSAPIURL'].OutputValue" --output text)
 SKULISTEP=$(aws cloudformation describe-stacks --stack-name ECOMORDCPT --query "Stacks[0].Outputs[?OutputKey=='SKULISTEP'].OutputValue" --output text)
 
+SKUCLDFRDMN=$(aws cloudformation describe-stacks --stack-name ECOMORDCPT --query "Stacks[0].Outputs[?OutputKey=='SKUCLDFRDMN'].OutputValue" --output text) 
+CLDSKUURL=$(echo "https://$SKUCLDFRDMN" | awk '{print tolower($0)}')
+
 # update url's in ui
-sed -i "s#SKU_URL#${SKULISTEP}#g" src/common/config.json
+sed -i "s#SKU_URL#${CLDSKUURL}#g" src/common/config.json
 sed -i "s#USER_INFO_URL#${USERINFOGRPHURL}#g" src/common/config.json
 sed -i "s#ITEM_INFO_URL#${ITEMINFOURL}#g" src/common/config.json
 sed -i "s#ORDER_URL#${SNSAPIURL}#g" src/common/config.json
