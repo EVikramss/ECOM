@@ -53,10 +53,7 @@ function Home() {
     return (
         <div className="bg-white headerSpacing relative">
 
-            <div className="absolute top-4 right-4 flex flex-col items-end">
-                <label htmlFor="pageSize" className="text-sm font-small text-gray-700 mb-1">
-                    per page
-                </label>
+            <div className="absolute top-4 left-4 flex flex-col items-end">
                 <select
                     id="pageSize"
                     name="pageSize"
@@ -68,6 +65,9 @@ function Home() {
                     <option value={60}>60</option>
                     <option value={90}>90</option>
                 </select>
+                <label htmlFor="pageSize" className="text-sm font-small text-gray-700 mb-1">
+                    per page
+                </label>
             </div>
 
             <div className="mx-auto max-w-xl px-4 py-16 sm:px-6 sm:py-24 lg:max-w-7xl lg:px-8">

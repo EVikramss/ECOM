@@ -2,6 +2,7 @@ import * as types from "./types/orderActionTypes";
 import * as orderAPI from "../../api/orderAPI";
 import { toast } from "react-toastify";
 import { beginApiCall, apiCallError, endApiCall } from "./apiBoundaryActions";
+import config from '../../common/config.json';
 
 export function setOrderNo(orderNo) {
     return { type: types.SET_ORDER_NO, orderNo };
@@ -43,13 +44,14 @@ export function fetchOrderNo(authInfo, navigate) {
 export function exportOrder(authInfo, navigate) {
     return function (dispatch, getState) {
         const orderNo = getState().orderState.orderNo;
-        const userSelectedAddress = getState().userSelectedAddress;
-        const userAddress = Object.values(userSelectedAddress);
+        const userAddress = getState().userSelectedAddress;
+        const cartItems = getState().cartState.cartItems;
+        const itemsArray = Object.values(cartItems);
 
         if (orderNo) {
             // form orderJson
             const orderJson = {};
-            const entity = "test";
+            const entity = config.entity;
             const skuData = [];
 
             orderJson["orderNo"] = orderNo;
@@ -64,9 +66,9 @@ export function exportOrder(authInfo, navigate) {
                 "pincode": userAddress.phone
             };
             orderJson["customerContact"] = {
-                "fullName": userAddress.fullName,
-                "phone": userAddress.phone,
-                "email": userAddress.email
+                "fullName": "TBD",
+                "phone": "",
+                "email": ""
             };
 
             for (let counter = 0; counter < itemsArray.length; counter++) {

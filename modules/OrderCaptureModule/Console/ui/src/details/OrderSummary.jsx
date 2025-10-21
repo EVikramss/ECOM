@@ -13,8 +13,6 @@ export default function OrderSummary() {
   const auth = useAuth();
   const dispatch = useDispatch();
 
-  const userAddressVal = Object.values(userAddress);
-
   const itemsArray = Object.values(cartItems);
   const totalAmount = itemsArray.reduce((sum, item) => sum + item.orderQty * parseFloat(item.price), 0);
 
@@ -30,10 +28,10 @@ export default function OrderSummary() {
       <div className="mb-8">
         <h3 className="text-lg font-medium text-gray-700 mb-2">Customer Info</h3>
         <div className="text-sm text-gray-600">
-          <p>{userAddressVal.firstName} {userAddressVal.lastName}</p>
-          <p>{userAddressVal.email}</p>
-          <p>{userAddressVal.phone}</p>
-          <p>{userAddressVal.address}, {userAddressVal.city}, {userAddressVal.region} - {userAddressVal.postalCode}</p>
+          <p>{userAddress.firstName} {userAddress.lastName}</p>
+          <p>{userAddress.email}</p>
+          <p>{userAddress.phone}</p>
+          <p>{userAddress.address}, {userAddress.city}, {userAddress.region} - {userAddress.postalCode}</p>
         </div>
       </div>
 
