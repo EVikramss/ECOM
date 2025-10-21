@@ -5,6 +5,7 @@ import { useMemo } from 'react';
 import { useAuth } from "react-oidc-context";
 import { useDispatch, useSelector } from "react-redux";
 import { removeFromCart, changeCartQty, clearCart } from "../redux/actions/cartActions";
+import config from '../common/config.json';
 
 const formatCurrency = (value, currency = 'INR') =>
     new Intl.NumberFormat('en-IN', { style: 'currency', currency }).format(value);
@@ -85,7 +86,7 @@ function Cart() {
                                     const {
                                         itemID,
                                         desc,
-                                        imgurl,
+                                        imgUrl,
                                         availability,
                                         maxQty = 10,
                                         price,
@@ -103,7 +104,7 @@ function Cart() {
                                         <li key={itemID} className="flex py-6 sm:py-8">
                                             <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-md border border-gray-200 sm:h-32 sm:w-32">
                                                 <img
-                                                    src={imgurl}
+                                                    src={config.staticContentPrefix + imgUrl}
                                                     alt={desc}
                                                     className="h-full w-full object-cover object-center"
                                                     loading="lazy"

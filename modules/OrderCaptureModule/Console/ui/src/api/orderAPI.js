@@ -21,7 +21,7 @@ export function getOrderNo(authInfo) {
     const userSub = "orderNo";
 
     const graphqlQuery = {
-        "operationName": GET_ORDER_NO_OP_NAME,
+        "operationName": null,
         "query": GET_ORDER_NO,
         "variables": {}
     };
