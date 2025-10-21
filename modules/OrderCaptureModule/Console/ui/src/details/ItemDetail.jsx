@@ -28,7 +28,7 @@ function ItemDetail() {
         maxQty,
         taxCode,
         desc,
-        imgurl,
+        imgUrl,
     } = itemData;
 
     // fetch availability for item
@@ -94,7 +94,7 @@ function ItemDetail() {
                     <div className="w-full">
                         <div className="overflow-hidden rounded-2xl bg-gray-100 shadow-sm ring-1 ring-gray-200">
                             <img
-                                src={config.staticContentPrefix + imgurl}
+                                src={config.staticContentPrefix + imgUrl}
                                 alt={desc}
                                 className="h-full w-full object-cover object-center"
                             />
