@@ -8,6 +8,7 @@ import java.util.Properties;
 import software.amazon.awscdk.Aws;
 import software.amazon.awscdk.CfnOutput;
 import software.amazon.awscdk.Duration;
+import software.amazon.awscdk.Fn;
 import software.amazon.awscdk.RemovalPolicy;
 import software.amazon.awscdk.Stack;
 import software.amazon.awscdk.StackProps;
@@ -18,6 +19,7 @@ import software.amazon.awscdk.services.apigateway.CognitoUserPoolsAuthorizer;
 import software.amazon.awscdk.services.apigateway.CorsOptions;
 import software.amazon.awscdk.services.apigateway.EndpointConfiguration;
 import software.amazon.awscdk.services.apigateway.EndpointType;
+import software.amazon.awscdk.services.apigateway.HttpIntegration;
 import software.amazon.awscdk.services.apigateway.Integration;
 import software.amazon.awscdk.services.apigateway.IntegrationOptions;
 import software.amazon.awscdk.services.apigateway.IntegrationResponse;
@@ -52,6 +54,7 @@ import software.amazon.awscdk.services.cloudfront.DistributionProps;
 import software.amazon.awscdk.services.cloudfront.IOrigin;
 import software.amazon.awscdk.services.cloudfront.OriginAccessIdentity;
 import software.amazon.awscdk.services.cloudfront.ViewerProtocolPolicy;
+import software.amazon.awscdk.services.cloudfront.origins.HttpOrigin;
 import software.amazon.awscdk.services.cloudfront.origins.S3BucketOrigin;
 import software.amazon.awscdk.services.cloudfront.origins.S3BucketOriginWithOAIProps;
 import software.amazon.awscdk.services.cognito.AccountRecovery;
@@ -109,6 +112,7 @@ import software.amazon.awscdk.services.elasticloadbalancingv2.TargetType;
 import software.amazon.awscdk.services.iam.IManagedPolicy;
 import software.amazon.awscdk.services.iam.IRole;
 import software.amazon.awscdk.services.iam.ManagedPolicy;
+import software.amazon.awscdk.services.iam.PolicyStatement;
 import software.amazon.awscdk.services.iam.Role;
 import software.amazon.awscdk.services.iam.ServicePrincipal;
 import software.amazon.awscdk.services.lambda.Function;
@@ -150,6 +154,7 @@ public class CdkStack extends Stack {
 	private Bucket websiteBucket;
 	private IBucket bucket;
 	private Distribution distribution;
+	private Distribution distributionAPI;
 	private GraphqlApi userInfoApi;
 	private RestApi itemInfoApi;
 	private RestApi qapi;
@@ -213,6 +218,12 @@ public class CdkStack extends Stack {
 		// create sns topic with Q as subscriber
 		createOrderTopic = Topic.Builder.create(this, "CreateOrderTopic").topicName("CreateOrderTopic").build();
 		createOrderTopic.addSubscription(new SqsSubscription(createOrderQ));
+
+		// add policy to sqs to allow posting from sns
+		createOrderQ.addToResourcePolicy(PolicyStatement.Builder.create().actions(List.of("sqs:SendMessage"))
+				.principals(List.of(new ServicePrincipal("sns.amazonaws.com")))
+				.resources(List.of(createOrderQ.getQueueArn()))
+				.conditions(Map.of("ArnEquals", Map.of("aws:SourceArn", createOrderTopic.getTopicArn()))).build());
 
 		// similar to
 		// https://docs.aws.amazon.com/prescriptive-guidance/latest/patterns/integrate-amazon-api-gateway-with-amazon-sqs-to-handle-asynchronous-rest-apis.html
@@ -325,9 +336,6 @@ public class CdkStack extends Stack {
 	private void createAPIGWForItemInfoService(String baseDir, ITable itemInfoTable) {
 		itemInfoApi = RestApi.Builder.create(this, "ItemInfoAPI").restApiName("ItemInfoAPI")
 				.endpointConfiguration(EndpointConfiguration.builder().types(List.of(EndpointType.EDGE)).build())
-				.defaultCorsPreflightOptions(CorsOptions.builder().allowCredentials(false).allowOrigins(List.of("*"))
-						.allowMethods(List.of(CorsHttpMethod.GET.toString()))
-						.allowHeaders(List.of("Content-Type", "origin", "accept")).maxAge(Duration.days(10)).build())
 				.build();
 		Resource infoResource = itemInfoApi.getRoot().addResource("info");
 
@@ -590,6 +598,16 @@ public class CdkStack extends Stack {
 
 		ecsHTTPApi.addRoutes(AddRoutesOptions.builder().path("/getSkuList").methods(List.of(HttpMethod.GET))
 				.integration(albIntegration).build());
+
+		// Using cloudfront distribution as restapi doesnt use apigateway v2, which
+		// allows alb. For restapi need to create nlb ...
+		distributionAPI = new Distribution(this, "OrderCapDistribution", DistributionProps.builder()
+				.defaultBehavior(software.amazon.awscdk.services.cloudfront.BehaviorOptions.builder()
+						.origin(HttpOrigin.Builder.create(Fn.select(2, Fn.split("/", ecsHTTPApi.getApiEndpoint())))
+								.build())
+						.cachePolicy(CachePolicy.CACHING_OPTIMIZED)
+						.viewerProtocolPolicy(ViewerProtocolPolicy.REDIRECT_TO_HTTPS).build())
+				.build());
 	}
 
 	private void lookupNetwork() {
@@ -635,6 +653,7 @@ public class CdkStack extends Stack {
 		if (ecsHTTPApi != null) {
 			CfnOutput.Builder.create(this, "SKULISTEP").value(ecsHTTPApi.getApiEndpoint()).build();
 			CfnOutput.Builder.create(this, "SKULISTID").value(ecsHTTPApi.getApiId()).build();
+			CfnOutput.Builder.create(this, "SKUCLDFRDMN").value(distributionAPI.getDistributionDomainName()).build();
 		}
 	}
 }
