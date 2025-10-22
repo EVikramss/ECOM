@@ -27,6 +27,7 @@ export default function OrderSummary() {
           <p>{userAddress.addressLine2}</p>
           <p>{userAddress.city}</p>
           <p>{userAddress.country}</p>
+          <p>{userAddress.city}</p>
           <p>{userAddress.postalCode}</p>
         </div>
       </div>

@@ -16,7 +16,7 @@ function Payment() {
     const handleConfirmPayment = (e) => {
         e.preventDefault();
         dispatch(exportOrder(auth, navigate));
-      };
+    };
 
     return (
         <div className="max-w-4xl mx-auto p-6 bg-white shadow-md rounded-md headerSpacing">

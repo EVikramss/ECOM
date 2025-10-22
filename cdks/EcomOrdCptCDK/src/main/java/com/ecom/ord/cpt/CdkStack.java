@@ -195,7 +195,7 @@ public class CdkStack extends Stack {
 		String relLambdaName = stackName + lambdaName;
 
 		SecurityGroup sg = new SecurityGroup(stack, relLambdaName + "SecurityGroup",
-				SecurityGroupProps.builder().allowAllOutbound(false).vpc(vpc).build());
+				SecurityGroupProps.builder().allowAllOutbound(true).vpc(vpc).build());
 
 		Function function = Function.Builder.create(this, relLambdaName).runtime(Runtime.PYTHON_3_11)
 				.functionName(relLambdaName)
@@ -486,6 +486,12 @@ public class CdkStack extends Stack {
 				.fieldName("deleteUserInfo").runtime(FunctionRuntime.JS_1_0_0)
 				.code(Code.fromAsset(baseDir + "UserInfo/resolvers/genericResolver.js"))
 				.pipelineConfig(List.of(authCheckFn, deleteInfoFn)).build();
+
+		distribution.addBehavior("/graphql",
+				HttpOrigin.Builder.create(Fn.select(2, Fn.split("/", userInfoApi.getGraphqlUrl()))).build(),
+				software.amazon.awscdk.services.cloudfront.BehaviorOptions.builder()
+						.cachePolicy(CachePolicy.CACHING_DISABLED)
+						.viewerProtocolPolicy(ViewerProtocolPolicy.REDIRECT_TO_HTTPS).build());
 	}
 
 	private void setupECSJobs(String baseDir) {
