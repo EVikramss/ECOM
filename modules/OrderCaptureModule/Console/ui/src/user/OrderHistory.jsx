@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import UpdateAddress from './UpdateAddress';
 import { useAuth } from "react-oidc-context";
 import { getOrderHistory } from '../api/userOrderHistory';
 import { apiCallError, beginApiCall, endApiCall } from '../redux/actions/apiBoundaryActions';
