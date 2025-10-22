@@ -496,7 +496,12 @@ public class CdkStack extends Stack {
 				.code(Code.fromAsset(baseDir + "UserInfo/resolvers/genericResolver.js"))
 				.pipelineConfig(List.of(authCheckFn, deleteInfoFn)).build();
 
-		
+		HttpOrigin origin = HttpOrigin.Builder.create(Fn.select(2, Fn.split("/", userInfoApi.getGraphqlUrl()))).build();
+		distribution.addBehavior("/graphql", origin,
+				software.amazon.awscdk.services.cloudfront.BehaviorOptions.builder()
+						.origin(origin)
+						.cachePolicy(CachePolicy.CACHING_DISABLED)
+						.viewerProtocolPolicy(ViewerProtocolPolicy.REDIRECT_TO_HTTPS).build());
 	}
 
 	private void setupECSJobs(String baseDir) {
@@ -608,13 +613,12 @@ public class CdkStack extends Stack {
 
 		// Using cloudfront distribution as restapi doesnt use apigateway v2, which
 		// allows alb. For restapi need to create nlb ...
-		distribution.addBehavior("/getSkuList",
-				HttpOrigin.Builder.create(Fn.select(2, Fn.split("/", ecsHTTPApi.getApiEndpoint()))).build(),
-				software.amazon.awscdk.services.cloudfront.BehaviorOptions.builder()
-						.responseHeadersPolicy(
-								ResponseHeadersPolicy.CORS_ALLOW_ALL_ORIGINS_WITH_PREFLIGHT_AND_SECURITY_HEADERS)
-						.cachePolicy(CachePolicy.CACHING_OPTIMIZED)
-						.viewerProtocolPolicy(ViewerProtocolPolicy.REDIRECT_TO_HTTPS).build());
+		HttpOrigin origin = HttpOrigin.Builder.create(Fn.select(2, Fn.split("/", ecsHTTPApi.getApiEndpoint()))).build();
+		distribution.addBehavior("/getSkuList", origin, software.amazon.awscdk.services.cloudfront.BehaviorOptions
+				.builder().origin(origin)
+				.responseHeadersPolicy(ResponseHeadersPolicy.CORS_ALLOW_ALL_ORIGINS_WITH_PREFLIGHT_AND_SECURITY_HEADERS)
+				.cachePolicy(CachePolicy.CACHING_OPTIMIZED).viewerProtocolPolicy(ViewerProtocolPolicy.REDIRECT_TO_HTTPS)
+				.build());
 	}
 
 	private void lookupNetwork() {
