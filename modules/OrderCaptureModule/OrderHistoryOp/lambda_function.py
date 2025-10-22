@@ -10,7 +10,7 @@ table = dynamodb.Table(table_name)
 
 def lambda_handler(event, context):
     # Extract SNS message
-    message = event['Records'][0]['Sns']['Message']
+    message = json.loads(event['Records'][0]['Sns']['Message'])
     sub = message['sub']
     order_no = message['orderNo']
     item_data = message['itemData']
