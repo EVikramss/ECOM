@@ -48,6 +48,7 @@ import software.amazon.awscdk.services.appsync.NoneDataSource;
 import software.amazon.awscdk.services.appsync.Resolver;
 import software.amazon.awscdk.services.appsync.UserPoolConfig;
 import software.amazon.awscdk.services.cloudfront.CachePolicy;
+import software.amazon.awscdk.services.cloudfront.CacheQueryStringBehavior;
 import software.amazon.awscdk.services.cloudfront.Distribution;
 import software.amazon.awscdk.services.cloudfront.DistributionProps;
 import software.amazon.awscdk.services.cloudfront.IOrigin;
@@ -181,7 +182,7 @@ public class CdkStack extends Stack {
 		lookupSNS();
 
 		setupCognito();
-      setupOrderConsole(baseDir);
+		setupOrderConsole(baseDir);
 		createUserInfoService(baseDir);
 		createItemInfoService(baseDir);
 		createSNSBackedAPI();
@@ -216,7 +217,7 @@ public class CdkStack extends Stack {
 		// use same lambda for status updates as well
 		if (orderStatusUpdatesTopic != null) {
 			orderStatusUpdatesTopic.grantSubscribe(function);
-			//orderStatusUpdatesTopic.addSubscription(new LambdaSubscription(function));
+			orderStatusUpdatesTopic.addSubscription(new LambdaSubscription(function));
 		}
 	}
 
@@ -498,8 +499,7 @@ public class CdkStack extends Stack {
 
 		HttpOrigin origin = HttpOrigin.Builder.create(Fn.select(2, Fn.split("/", userInfoApi.getGraphqlUrl()))).build();
 		distribution.addBehavior("/graphql", origin,
-				software.amazon.awscdk.services.cloudfront.BehaviorOptions.builder()
-						.origin(origin)
+				software.amazon.awscdk.services.cloudfront.BehaviorOptions.builder().origin(origin)
 						.cachePolicy(CachePolicy.CACHING_DISABLED)
 						.viewerProtocolPolicy(ViewerProtocolPolicy.REDIRECT_TO_HTTPS).build());
 	}
@@ -613,12 +613,15 @@ public class CdkStack extends Stack {
 
 		// Using cloudfront distribution as restapi doesnt use apigateway v2, which
 		// allows alb. For restapi need to create nlb ...
+
+		CachePolicy skuListPolicy = CachePolicy.Builder.create(this, "skuListCachePolicy").defaultTtl(Duration.days(1))
+				.maxTtl(Duration.days(1)).queryStringBehavior(CacheQueryStringBehavior.all()).build();
+
 		HttpOrigin origin = HttpOrigin.Builder.create(Fn.select(2, Fn.split("/", ecsHTTPApi.getApiEndpoint()))).build();
 		distribution.addBehavior("/getSkuList", origin, software.amazon.awscdk.services.cloudfront.BehaviorOptions
 				.builder().origin(origin)
 				.responseHeadersPolicy(ResponseHeadersPolicy.CORS_ALLOW_ALL_ORIGINS_WITH_PREFLIGHT_AND_SECURITY_HEADERS)
-				.cachePolicy(CachePolicy.CACHING_OPTIMIZED).viewerProtocolPolicy(ViewerProtocolPolicy.REDIRECT_TO_HTTPS)
-				.build());
+				.cachePolicy(skuListPolicy).viewerProtocolPolicy(ViewerProtocolPolicy.REDIRECT_TO_HTTPS).build());
 	}
 
 	private void lookupNetwork() {
