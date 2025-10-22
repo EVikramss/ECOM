@@ -216,7 +216,7 @@ public class CdkStack extends Stack {
 		// use same lambda for status updates as well
 		if (orderStatusUpdatesTopic != null) {
 			orderStatusUpdatesTopic.grantSubscribe(function);
-			orderStatusUpdatesTopic.addSubscription(new LambdaSubscription(function));
+			//orderStatusUpdatesTopic.addSubscription(new LambdaSubscription(function));
 		}
 	}
 
