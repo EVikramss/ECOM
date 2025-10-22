@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useAuth } from "react-oidc-context";
 import { getOrderHistory } from '../api/userOrderHistory';
 import { apiCallError, beginApiCall, endApiCall } from '../redux/actions/apiBoundaryActions';
+import * as util from "../common/util";
 
 function OrderHistory() {
     const dispatch = useDispatch();
@@ -19,7 +20,7 @@ function OrderHistory() {
         dispatch(beginApiCall());
         getOrderHistory(auth).then(response => {
             if (response.data.data.getUserInfo && response.data.data.getUserInfo.data) {
-                setOrderHistory(response.data.data.getUserInfo.data);
+                setOrderHistory(util.decompressObject(response.data.data.getUserInfo.data));
             }
             dispatch(endApiCall());
         }).catch(error => {

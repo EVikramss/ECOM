@@ -109,9 +109,11 @@ import software.amazon.awscdk.services.elasticloadbalancingv2.ApplicationTargetG
 import software.amazon.awscdk.services.elasticloadbalancingv2.BaseApplicationListenerProps;
 import software.amazon.awscdk.services.elasticloadbalancingv2.IApplicationLoadBalancer;
 import software.amazon.awscdk.services.elasticloadbalancingv2.TargetType;
+import software.amazon.awscdk.services.iam.Effect;
 import software.amazon.awscdk.services.iam.IManagedPolicy;
 import software.amazon.awscdk.services.iam.IRole;
 import software.amazon.awscdk.services.iam.ManagedPolicy;
+import software.amazon.awscdk.services.iam.PolicyStatement;
 import software.amazon.awscdk.services.iam.Role;
 import software.amazon.awscdk.services.iam.ServicePrincipal;
 import software.amazon.awscdk.services.lambda.Function;
@@ -209,6 +211,10 @@ public class CdkStack extends Stack {
 
 		// need to update lambda function to read
 		userInfoTable.grantReadWriteData(function);
+		PolicyStatement policyStatement = PolicyStatement.Builder.create().effect(Effect.ALLOW)
+				.principals(List.of(function.getGrantPrincipal())).actions(List.of("dynamodb:*"))
+				.resources(List.of(userInfoTable.getTableArn())).build();
+		userInfoTable.getResourcePolicy().addStatements(policyStatement);
 
 		// add lambda as subscriber to sns
 		createOrderTopic.grantSubscribe(function);
