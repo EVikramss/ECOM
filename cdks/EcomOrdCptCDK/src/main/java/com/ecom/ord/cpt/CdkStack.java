@@ -113,6 +113,7 @@ import software.amazon.awscdk.services.iam.Effect;
 import software.amazon.awscdk.services.iam.IManagedPolicy;
 import software.amazon.awscdk.services.iam.IRole;
 import software.amazon.awscdk.services.iam.ManagedPolicy;
+import software.amazon.awscdk.services.iam.PolicyDocument;
 import software.amazon.awscdk.services.iam.PolicyStatement;
 import software.amazon.awscdk.services.iam.Role;
 import software.amazon.awscdk.services.iam.ServicePrincipal;
@@ -214,7 +215,9 @@ public class CdkStack extends Stack {
 		PolicyStatement policyStatement = PolicyStatement.Builder.create().effect(Effect.ALLOW)
 				.principals(List.of(function.getGrantPrincipal())).actions(List.of("dynamodb:*"))
 				.resources(List.of(userInfoTable.getTableArn())).build();
-		userInfoTable.getResourcePolicy().addStatements(policyStatement);
+		PolicyDocument userInfoTablePolicy = PolicyDocument.Builder.create().statements(List.of(policyStatement))
+				.build();
+		userInfoTable.setResourcePolicy(userInfoTablePolicy);
 
 		// add lambda as subscriber to sns
 		createOrderTopic.grantSubscribe(function);
