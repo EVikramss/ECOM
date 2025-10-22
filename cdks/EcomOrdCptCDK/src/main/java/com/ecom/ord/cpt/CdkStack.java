@@ -209,15 +209,19 @@ public class CdkStack extends Stack {
 				.code(software.amazon.awscdk.services.lambda.Code.fromAsset(baseDir + lambdaName + ".zip"))
 				.handler("lambda_function.lambda_handler").securityGroups(Arrays.asList(sg)).vpc(vpc)
 				.environment(Map.of("TABLE_NAME", userInfoTable.getTableName())).build();
+		//function.getRole().addManagedPolicy(ManagedPolicy.fromAwsManagedPolicyName("AmazonDynamoDBFullAccess")); // to be restricted
 
 		// need to update lambda function to read
-		userInfoTable.grantReadWriteData(function);
-		PolicyStatement policyStatement = PolicyStatement.Builder.create().effect(Effect.ALLOW)
-				.principals(List.of(function.getGrantPrincipal())).actions(List.of("dynamodb:*"))
-				.resources(List.of(userInfoTable.getTableArn())).build();
-		PolicyDocument userInfoTablePolicy = PolicyDocument.Builder.create().statements(List.of(policyStatement))
-				.build();
-		userInfoTable.setResourcePolicy(userInfoTablePolicy);
+		userInfoTable.grantReadWriteData(function.getRole());
+		/*
+		 * PolicyStatement policyStatement =
+		 * PolicyStatement.Builder.create().effect(Effect.ALLOW)
+		 * .principals(List.of(function.getGrantPrincipal())).actions(List.of(
+		 * "dynamodb:*")) .resources(List.of(userInfoTable.getTableArn())).build();
+		 * PolicyDocument userInfoTablePolicy =
+		 * PolicyDocument.Builder.create().statements(List.of(policyStatement))
+		 * .build(); userInfoTable.setResourcePolicy(userInfoTablePolicy);
+		 */
 
 		// add lambda as subscriber to sns
 		createOrderTopic.grantSubscribe(function);
