@@ -23,6 +23,7 @@ VPCLINKID=$(aws cloudformation describe-stacks --stack-name COMMON --query "Stac
 INVDBSG=$(aws cloudformation describe-stacks --stack-name ECOMINV --query "Stacks[0].Outputs[?OutputKey=='DBPRXYSGID'].OutputValue" --output text)
 INVDBEP=$(aws cloudformation describe-stacks --stack-name ECOMINV --query "Stacks[0].Outputs[?OutputKey=='DBPRXYEP'].OutputValue" --output text)
 INVDBSECARN=$(aws cloudformation describe-stacks --stack-name ECOMINV --query "Stacks[0].Outputs[?OutputKey=='DBSECARN'].OutputValue" --output text)
+OSUTOPICARN=$(aws cloudformation describe-stacks --stack-name COMMON --query "Stacks[0].Outputs[?OutputKey=='OSUTOPICARN'].OutputValue" --output text)
 
 export VPCID
 export SMEPID
@@ -47,3 +48,4 @@ export INVDBEP
 export INVDBSECARN
 export CREATEORDERQARN
 export VPCLINKID
+export OSUTOPICARN

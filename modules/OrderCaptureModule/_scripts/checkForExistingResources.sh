@@ -20,6 +20,7 @@ CREATEORDERQARN=$(aws cloudformation describe-stacks --stack-name COMMON --query
 ALBARN=$(aws cloudformation describe-stacks --stack-name COMMON --query "Stacks[0].Outputs[?OutputKey=='ALBARN'].OutputValue" --output text)
 ALBSG=$(aws cloudformation describe-stacks --stack-name COMMON --query "Stacks[0].Outputs[?OutputKey=='ALBSG'].OutputValue" --output text)
 VPCLINKID=$(aws cloudformation describe-stacks --stack-name COMMON --query "Stacks[0].Outputs[?OutputKey=='VPCLINKID'].OutputValue" --output text)
+OSUTOPICARN=$(aws cloudformation describe-stacks --stack-name COMMON --query "Stacks[0].Outputs[?OutputKey=='OSUTOPICARN'].OutputValue" --output text)
 
 export VPCID
 export SMEPID
@@ -41,3 +42,4 @@ export CREATEORDERQARN
 export ALBARN
 export ALBSG
 export VPCLINKID
+export OSUTOPICARN

@@ -79,6 +79,7 @@ export function exportOrder(authInfo, navigate) {
                 orderSku["price"] = itemData.price;
                 orderSku["taxCode"] = itemData.taxCode;
                 orderSku["desc"] = itemData.desc;
+                orderSku["status"] = "pending";
                 skuData.push(orderSku);
             }
             orderJson["itemData"] = skuData;

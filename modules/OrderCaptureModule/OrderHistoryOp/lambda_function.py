@@ -17,7 +17,7 @@ def lambda_handler(event, context):
     
     # Prepare new entry
     new_entry = {
-        order_no: [{'sku': item['sku'], 'qty': item['qty']} for item in item_data]
+        order_no: [{'sku': item['sku'], 'qty': item['qty'], 'status': item['status']} for item in item_data]
     }
     
     # Query DynamoDB
@@ -36,15 +36,14 @@ def lambda_handler(event, context):
         # Existing record found
         existing_data = decompress(response['Item']['data'])
 
-        if order_no not in existing_data:
-            existing_data.update(new_entry)
-            compressed_data = compress(existing_data)
-            table.update_item(
-                Key=key,
-                UpdateExpression='SET #d = :val',
-                ExpressionAttributeNames={'#d': 'data'},
-                ExpressionAttributeValues={':val': compressed_data}
-            )
+        existing_data.update(new_entry)
+        compressed_data = compress(existing_data)
+        table.update_item(
+            Key=key,
+            UpdateExpression='SET #d = :val',
+            ExpressionAttributeNames={'#d': 'data'},
+            ExpressionAttributeValues={':val': compressed_data}
+        )
 
     return {
         'statusCode': 200,

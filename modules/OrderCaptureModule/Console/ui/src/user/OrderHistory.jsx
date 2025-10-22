@@ -51,6 +51,7 @@ function OrderHistory() {
                                             <div key={index} className="text-gray-700">
                                                 <p>SKU: {item.sku}</p>
                                                 <p>Quantity: {item.qty}</p>
+                                                <p>Status: {item.status}</p>
                                             </div>
                                         ))}
                                     </div>

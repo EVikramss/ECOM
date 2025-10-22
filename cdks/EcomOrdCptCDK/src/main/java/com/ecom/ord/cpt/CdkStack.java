@@ -125,6 +125,7 @@ import software.amazon.awscdk.services.servicediscovery.DnsRecordType;
 import software.amazon.awscdk.services.servicediscovery.IPrivateDnsNamespace;
 import software.amazon.awscdk.services.servicediscovery.PrivateDnsNamespace;
 import software.amazon.awscdk.services.servicediscovery.PrivateDnsNamespaceAttributes;
+import software.amazon.awscdk.services.sns.ITopic;
 import software.amazon.awscdk.services.sns.Topic;
 import software.amazon.awscdk.services.sns.subscriptions.LambdaSubscription;
 import software.amazon.awscdk.services.sns.subscriptions.SqsSubscription;
@@ -158,6 +159,7 @@ public class CdkStack extends Stack {
 
 	private IQueue createOrderQ;
 	private Topic createOrderTopic;
+	private ITopic orderStatusUpdatesTopic;
 
 	private Table userInfoTable;
 
@@ -176,6 +178,7 @@ public class CdkStack extends Stack {
 		lookupEndpoints();
 		lookupS3();
 		lookupSQS();
+		lookupSNS();
 
 		setupCognito();
 		createUserInfoService(baseDir);
@@ -209,6 +212,12 @@ public class CdkStack extends Stack {
 		// add lambda as subscriber to sns
 		createOrderTopic.grantSubscribe(function);
 		createOrderTopic.addSubscription(new LambdaSubscription(function));
+
+		// use same lambda for status updates as well
+		if (orderStatusUpdatesTopic != null) {
+			orderStatusUpdatesTopic.grantSubscribe(function);
+			orderStatusUpdatesTopic.addSubscription(new LambdaSubscription(function));
+		}
 	}
 
 	private void createSNSBackedAPI() {
@@ -635,6 +644,13 @@ public class CdkStack extends Stack {
 	private void lookupSQS() {
 		String createOrderQARN = System.getenv("CREATEORDERQARN");
 		createOrderQ = Queue.fromQueueArn(this, "CreateOrderQ", createOrderQARN);
+	}
+
+	private void lookupSNS() {
+		String orderStatusUpdatesTopicARN = System.getenv("OSUTOPICARN");
+		if (orderStatusUpdatesTopicARN != null && orderStatusUpdatesTopicARN.trim().length() > 0) {
+			orderStatusUpdatesTopic = Topic.fromTopicArn(this, "OrderStatusUpdates", orderStatusUpdatesTopicARN);
+		}
 	}
 
 	/**

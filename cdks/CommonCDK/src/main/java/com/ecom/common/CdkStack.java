@@ -54,6 +54,7 @@ import software.amazon.awscdk.services.s3.BucketPolicy;
 import software.amazon.awscdk.services.s3.BucketPolicyProps;
 import software.amazon.awscdk.services.s3.BucketProps;
 import software.amazon.awscdk.services.servicediscovery.PrivateDnsNamespace;
+import software.amazon.awscdk.services.sns.Topic;
 import software.amazon.awscdk.services.sqs.Queue;
 import software.constructs.Construct;
 
@@ -77,6 +78,7 @@ public class CdkStack extends Stack {
 	private Bucket ecomBucket;
 
 	private Queue createOrderQ;
+	private Topic orderStatusUpdatesTopic;
 
 	private Function runDDLFunc;
 	private ISecurityGroup runDDLFuncSG;
@@ -103,8 +105,16 @@ public class CdkStack extends Stack {
 		setupECSCluster();
 		setupVPCALB();
 		setupSQS();
+		setupSNS();
 
 		setupOutputVariables();
+	}
+
+	private void setupSNS() {
+		orderStatusUpdatesTopic = Topic.Builder.create(this, "OrderStatusUpdates").topicName("OrderStatusUpdates")
+				.fifo(true)
+				.messageRetentionPeriodInDays(1)
+				.build();
 	}
 
 	private void setupSQS() {
@@ -396,5 +406,6 @@ public class CdkStack extends Stack {
 		CfnOutput.Builder.create(this, "ALBSG").value(albSecurityGroup.getSecurityGroupId()).build();
 		CfnOutput.Builder.create(this, "CREATEORDERQARN").value(createOrderQ.getQueueArn()).build();
 		CfnOutput.Builder.create(this, "VPCLINKID").value(vpcLink.getVpcLinkId()).build();
+		CfnOutput.Builder.create(this, "OSUTOPICARN").value(orderStatusUpdatesTopic.getTopicArn()).build();
 	}
 }
