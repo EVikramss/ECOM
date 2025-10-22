@@ -496,11 +496,7 @@ public class CdkStack extends Stack {
 				.code(Code.fromAsset(baseDir + "UserInfo/resolvers/genericResolver.js"))
 				.pipelineConfig(List.of(authCheckFn, deleteInfoFn)).build();
 
-		distribution.addBehavior("/graphql",
-				HttpOrigin.Builder.create(Fn.select(2, Fn.split("/", userInfoApi.getGraphqlUrl()))).build(),
-				software.amazon.awscdk.services.cloudfront.BehaviorOptions.builder()
-						.cachePolicy(CachePolicy.CACHING_DISABLED)
-						.viewerProtocolPolicy(ViewerProtocolPolicy.REDIRECT_TO_HTTPS).build());
+		
 	}
 
 	private void setupECSJobs(String baseDir) {
