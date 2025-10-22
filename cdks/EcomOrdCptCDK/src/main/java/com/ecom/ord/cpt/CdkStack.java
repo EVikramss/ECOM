@@ -181,9 +181,9 @@ public class CdkStack extends Stack {
 		lookupSNS();
 
 		setupCognito();
+      setupOrderConsole(baseDir);
 		createUserInfoService(baseDir);
 		createItemInfoService(baseDir);
-		setupOrderConsole(baseDir);
 		createSNSBackedAPI();
 		setupECSJobs(baseDir);
 		exposeECSWithHttpApi();
