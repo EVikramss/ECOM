@@ -32,10 +32,9 @@ public class OrderDataMapper {
 		com.ecom.dto.CustomerContact inputCustomerContact = inputData.getCustomerContact();
 		CustomerContact cc = new CustomerContact();
 		cc.setEmail(inputCustomerContact.getEmail());
-		cc.setFirstName(inputCustomerContact.getFirstName());
-		cc.setLastName(inputCustomerContact.getLastName());
+		cc.setFullName(inputCustomerContact.getFullName());
 		cc.setPhone(inputCustomerContact.getPhone());
-		cc.setSalutation(inputCustomerContact.getSalutation());
+		cc.setSub(inputCustomerContact.getSub());
 		
 		Set<com.ecom.dto.OrderItemData> inputItemDataSet = inputData.getItemData();
 		Set<OrderItemData> itemDataSet = new HashSet<OrderItemData>();
@@ -81,10 +80,9 @@ public class OrderDataMapper {
 		CustomerContact inputCustomerContact = inputData.getCustomerContact();
 		com.ecom.dto.CustomerContact cc = new com.ecom.dto.CustomerContact();
 		cc.setEmail(inputCustomerContact.getEmail());
-		cc.setFirstName(inputCustomerContact.getFirstName());
-		cc.setLastName(inputCustomerContact.getLastName());
+		cc.setFullName(inputCustomerContact.getFullName());
 		cc.setPhone(inputCustomerContact.getPhone());
-		cc.setSalutation(inputCustomerContact.getSalutation());
+		cc.setSub(inputCustomerContact.getSub());
 		
 		Set<OrderItemData> inputItemDataSet = inputData.getItemData();
 		Set<com.ecom.dto.OrderItemData> itemDataSet = new HashSet<com.ecom.dto.OrderItemData>();

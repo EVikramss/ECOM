@@ -4,43 +4,21 @@ import jakarta.validation.constraints.NotBlank;
 
 public class CustomerContact {
 
-	@NotBlank(message = "customerContact.salutation is required")
-	private String salutation;
+	@NotBlank(message = "customerContact.fullName is required")
+	private String fullName;
 
-	@NotBlank(message = "customerContact.firstName is required")
-	private String firstName;
-
-	@NotBlank(message = "customerContact.lastName is required")
-	private String lastName;
-
-	@NotBlank(message = "customerContact.phone is required")
 	private String phone;
 
-	@NotBlank(message = "customerContact.email is required")
 	private String email;
 
-	public String getSalutation() {
-		return salutation;
+	private String sub;
+
+	public String getFullName() {
+		return fullName;
 	}
 
-	public void setSalutation(String salutation) {
-		this.salutation = salutation;
-	}
-
-	public String getFirstName() {
-		return firstName;
-	}
-
-	public void setFirstName(String firstName) {
-		this.firstName = firstName;
-	}
-
-	public String getLastName() {
-		return lastName;
-	}
-
-	public void setLastName(String lastName) {
-		this.lastName = lastName;
+	public void setFullName(String fullName) {
+		this.fullName = fullName;
 	}
 
 	public String getPhone() {
@@ -57,5 +35,13 @@ public class CustomerContact {
 
 	public void setEmail(String email) {
 		this.email = email;
+	}
+
+	public String getSub() {
+		return sub;
+	}
+
+	public void setSub(String sub) {
+		this.sub = sub;
 	}
 }

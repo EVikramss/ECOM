@@ -16,20 +16,17 @@ public class CustomerContact {
 	@Column(name = "customer_contact_key")
 	private BigInteger customerContactkey;
 
-	@Column(length = 3, nullable = false)
-	private String salutation;
-
 	@Column(length = 16, nullable = false)
-	private String firstName;
+	private String fullName;
 
-	@Column(length = 16, nullable = false)
-	private String lastName;
-
-	@Column(length = 16, nullable = false)
+	@Column(length = 16, nullable = true)
 	private String phone;
 
-	@Column(length = 16, nullable = false)
+	@Column(length = 16, nullable = true)
 	private String email;
+	
+	@Column(length = 36, nullable = true)
+	private String sub;
 
 	@OneToOne(mappedBy = "customerContact")
 	@JsonBackReference
@@ -41,30 +38,6 @@ public class CustomerContact {
 
 	public void setCustomerContactkey(BigInteger customerContactkey) {
 		this.customerContactkey = customerContactkey;
-	}
-
-	public String getSalutation() {
-		return salutation;
-	}
-
-	public void setSalutation(String salutation) {
-		this.salutation = salutation;
-	}
-
-	public String getFirstName() {
-		return firstName;
-	}
-
-	public void setFirstName(String firstName) {
-		this.firstName = firstName;
-	}
-
-	public String getLastName() {
-		return lastName;
-	}
-
-	public void setLastName(String lastName) {
-		this.lastName = lastName;
 	}
 
 	public String getPhone() {
@@ -89,5 +62,21 @@ public class CustomerContact {
 
 	public void setOrderData(OrderData orderData) {
 		this.orderData = orderData;
+	}
+
+	public String getSub() {
+		return sub;
+	}
+
+	public void setSub(String sub) {
+		this.sub = sub;
+	}
+
+	public String getFullName() {
+		return fullName;
+	}
+
+	public void setFullName(String fullName) {
+		this.fullName = fullName;
 	}
 }

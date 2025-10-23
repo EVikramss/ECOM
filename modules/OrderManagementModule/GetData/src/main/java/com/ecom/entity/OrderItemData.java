@@ -28,6 +28,15 @@ public class OrderItemData {
 
 	@Column(length = 40, nullable = false)
 	private String sku;
+	
+	@Column(length = 5, nullable = false)
+	private String taxCode;
+	
+	@Column(length = 80, nullable = false)
+	private String desc;
+	
+	@Column(precision = 3, nullable = false)
+	private float price;
 
 	@ManyToOne
 	@JsonBackReference
@@ -80,5 +89,29 @@ public class OrderItemData {
 
 	public void setOrderData(OrderData orderData) {
 		this.orderData = orderData;
+	}
+
+	public String getTaxCode() {
+		return taxCode;
+	}
+
+	public void setTaxCode(String taxCode) {
+		this.taxCode = taxCode;
+	}
+
+	public String getDesc() {
+		return desc;
+	}
+
+	public void setDesc(String desc) {
+		this.desc = desc;
+	}
+
+	public float getPrice() {
+		return price;
+	}
+
+	public void setPrice(float price) {
+		this.price = price;
 	}
 }
