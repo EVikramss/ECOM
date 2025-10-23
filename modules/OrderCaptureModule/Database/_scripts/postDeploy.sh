@@ -1,6 +1,6 @@
 #!/bin/bash
 
-orderHistoryARN=aws lambda get-function --function-name ECOMORDCPTOrderHistoryOp --query 'Configuration.FunctionArn' --output text
+orderHistoryARN=$(aws lambda get-function --function-name ECOMORDCPTOrderHistoryOp --query 'Configuration.FunctionArn' --output text)
 orderHistoryRoleARN=$(aws lambda get-function --function-name ECOMORDCPTOrderHistoryOp --query 'Configuration.Role' --output text)
 
 userInfoTableARN=$(aws dynamodb describe-table --table-name UserInfo --query 'Table.TableArn' --output text)
