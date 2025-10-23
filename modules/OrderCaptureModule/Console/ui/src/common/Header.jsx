@@ -50,7 +50,7 @@ function Header() {
     }, [auth.isLoading])
 
     return (
-        <div className="fixed top-0 left-0 w-full h-[10vh] bg-black border-b-4 border-indigo-300 flex flex-col justify-between px-6 py-2">
+        <div className="fixed z-40 top-0 left-0 w-full h-[10vh] bg-black border-b-4 border-indigo-300 flex flex-col justify-between px-6 py-2">
             <div className="relative rounded-xl bg-neutral-950 text-white px-6">
                 <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.12),rgba(255,255,255,0.02)_35%,transparent_60%)]"></div>
 
