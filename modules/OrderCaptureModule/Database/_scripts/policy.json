@@ -1,19 +1,19 @@
 { 
-   "Version": "2012-10-17", 
+   "Version": "2012-10-17",
    "Statement": [
-          { 
-            "Sid": "Statement1", 
-            "Effect": "Allow", 
+          {
+            "Sid": "Statement1",
+            "Effect": "Allow",
             "Principal": {
-                  "AWS" : [       
-                     "orderHistoryRoleARN"     
-                   ] 
-             }, 
+                  "AWS" : [
+                     "orderHistoryRoleARN"
+                   ]
+             },
              "Action": [
-                   "dynamodb:GetItem", 
+                   "dynamodb:GetItem",
                    "dynamodb:PutItem",
-                   "dynamodb:UpdateItem" 
-              ], 
+                   "dynamodb:UpdateItem"
+              ],
              "Resource": "userInfoTableARN"
          }
     ]
