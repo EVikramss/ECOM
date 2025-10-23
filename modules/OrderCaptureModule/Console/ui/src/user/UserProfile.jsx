@@ -4,6 +4,7 @@ import { useAuth } from "react-oidc-context";
 const UserProfile = () => {
   const auth = useAuth();
   const email = auth?.user?.profile?.email;
+  const name = auth?.user?.profile?.name;
 
   const handleChangePassword = () => {
     alert('Not implemented ...');
@@ -13,6 +14,7 @@ const UserProfile = () => {
     <div className="text-gray-700 space-y-4">
       <div>
         <span className="font-semibold">Email:</span> {email}
+        <span className="font-semibold">Name:</span> {name}
       </div>
       <button
         onClick={handleChangePassword}

@@ -66,7 +66,7 @@ export function exportOrder(authInfo, navigate) {
                 "pincode": userAddress.phone
             };
             orderJson["customerContact"] = {
-                "fullName": "TBD",
+                "fullName": authInfo.user.profile.name,
                 "phone": "",
                 "email": ""
             };

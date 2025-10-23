@@ -63,7 +63,7 @@ function Header() {
                         {auth.isAuthenticated ? (
                             <Menu as="div" className="relative inline-block">
                                 <MenuButton className="inline-flex gap-x-1.5 rounded-md bg-black px-3 py-2 text-sm font-semibold border border-white rounded text-white shadow-sm hover:bg-green-50 hover:text-black">
-                                    {auth.user.profile.email}
+                                    {auth.user.profile.name}
                                     <ChevronDownIcon aria-hidden="true" className="-mr-1 size-5 text-white" />
                                 </MenuButton>
 
