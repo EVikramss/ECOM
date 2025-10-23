@@ -56,7 +56,6 @@ export function exportOrder(authInfo, navigate) {
 
             orderJson["orderNo"] = orderNo;
             orderJson["entity"] = entity;
-            orderJson["sub"] = authInfo.user.profile.sub;
             orderJson["address"] = {
                 "country": "IND",
                 "city": userAddress.city,
@@ -68,7 +67,8 @@ export function exportOrder(authInfo, navigate) {
             orderJson["customerContact"] = {
                 "fullName": authInfo.user.profile.name,
                 "phone": "",
-                "email": ""
+                "email": "",
+                "sub": authInfo.user.profile.sub
             };
 
             for (let counter = 0; counter < itemsArray.length; counter++) {
