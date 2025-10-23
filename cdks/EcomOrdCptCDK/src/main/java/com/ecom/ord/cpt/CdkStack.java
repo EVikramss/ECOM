@@ -279,7 +279,7 @@ public class CdkStack extends Stack {
 										MethodResponse.builder().statusCode("400")
 												.responseModels(Map.of("application/json", Model.EMPTY_MODEL)).build()))
 								.authorizationType(AuthorizationType.COGNITO).authorizer(authorizer)
-								.authorizationScopes(List.of("email", "openid")).build());
+								.authorizationScopes(List.of("email", "openid", "profile")).build());
 	}
 
 	private void setupOrderConsole(String baseDir) {
@@ -328,7 +328,7 @@ public class CdkStack extends Stack {
 				.generateSecret(false).authFlows(AuthFlow.builder().userPassword(true).build())
 				.accessTokenValidity(Duration.hours(1))
 				.oAuth(OAuthSettings.builder().flows(OAuthFlows.builder().authorizationCodeGrant(true).build())
-						.scopes(List.of(OAuthScope.EMAIL, OAuthScope.OPENID)).callbackUrls(List.of("https://")).build())
+						.scopes(List.of(OAuthScope.EMAIL, OAuthScope.OPENID, OAuthScope.PROFILE)).callbackUrls(List.of("https://")).build())
 				.build();
 
 		CfnUserPoolClient cfnClient = (CfnUserPoolClient) userPoolClient.getNode().getDefaultChild();
