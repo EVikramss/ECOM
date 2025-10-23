@@ -13,7 +13,7 @@ serializer = TypeSerializer()
 def lambda_handler(event, context):
     # Extract SNS message
     message = json.loads(event['Records'][0]['Sns']['Message'])
-    sub = message['sub']
+    sub = message['customerContact']['sub']
     order_no = message['orderNo']
     item_data = message['itemData']
 
