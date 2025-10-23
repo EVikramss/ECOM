@@ -3,10 +3,12 @@ import os
 import boto3
 import zlib
 import base64
+from boto3.dynamodb.types import TypeDeserializer, TypeSerializer
 
-dynamodb = boto3.resource('dynamodb')
+dynamo = boto3.client('dynamodb')
 table_name = os.environ['TABLE_NAME']
-table = dynamodb.Table(table_name)
+deserializer = TypeDeserializer()
+serializer = TypeSerializer()
 
 def lambda_handler(event, context):
     # Extract SNS message
@@ -14,42 +16,49 @@ def lambda_handler(event, context):
     sub = message['sub']
     order_no = message['orderNo']
     item_data = message['itemData']
-    
+
     # Prepare new entry
     new_entry = {
         order_no: [{'sku': item['sku'], 'qty': item['qty'], 'status': item['status']} for item in item_data]
     }
-    
-    # Query DynamoDB
-    key = {'userSub': sub, 'infoType': 'history'}
-    response = table.get_item(Key=key)
-    
+
+    key = {
+        'userSub': serializer.serialize(sub),
+        'infoType': serializer.serialize('history')
+    }
+
+    print("Key:", key)
+    response = dynamo.get_item(TableName=table_name, Key=key)
+    print("Response:", response)
+
     if 'Item' not in response:
         # No existing record, insert new
         compressed_data = compress(new_entry)
-        table.put_item(Item={
-            'userSub': sub,
-            'infoType': 'history',
-            'data': compressed_data
-        })
+        item = {
+            'userSub': serializer.serialize(sub),
+            'infoType': serializer.serialize('history'),
+            'data': serializer.serialize(compressed_data)
+        }
+        dynamo.put_item(TableName=table_name, Item=item)
     else:
         # Existing record found
-        existing_data = decompress(response['Item']['data'])
-
+        existing_data = decompress(deserializer.deserialize(response['Item']['data']))
         existing_data.update(new_entry)
         compressed_data = compress(existing_data)
-        table.update_item(
+
+        dynamo.update_item(
+            TableName=table_name,
             Key=key,
             UpdateExpression='SET #d = :val',
             ExpressionAttributeNames={'#d': 'data'},
-            ExpressionAttributeValues={':val': compressed_data}
+            ExpressionAttributeValues={':val': serializer.serialize(compressed_data)}
         )
 
     return {
         'statusCode': 200,
         'body': json.dumps('Processed successfully')
     }
-    
+
 def compress(jsonData):
     json_bytes = json.dumps(jsonData).encode('utf-8')
     compressed = zlib.compress(json_bytes)

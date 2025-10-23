@@ -20,3 +20,9 @@ aws apigateway update-integration-response --rest-api-id "$ITEMINFOAPIID" --reso
 # deploy changes
 aws apigateway create-deployment --rest-api-id "$SNSAPIID" --stage-name prod
 aws apigateway create-deployment --rest-api-id "$ITEMINFOAPIID" --stage-name prod
+
+# subscribe history lambda to status q
+OSUTOPICARN=$(aws cloudformation describe-stacks --stack-name COMMON --query "Stacks[0].Outputs[?OutputKey=='OSUTOPICARN'].OutputValue" --output text)
+orderHistoryARN=$(aws lambda get-function --function-name ECOMORDCPTOrderHistoryOp --query 'Configuration.FunctionArn' --output text)
+
+aws sns subscribe --topic-arn "$OSUTOPICARN" --protocol lambda --notification-endpoint "$orderHistoryARN"
