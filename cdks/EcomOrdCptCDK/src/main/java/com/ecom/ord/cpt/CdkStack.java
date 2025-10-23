@@ -681,6 +681,7 @@ public class CdkStack extends Stack {
 		CfnOutput.Builder.create(this, "CLOUDFRONTID").value(distribution.getDistributionId()).build();
 		CfnOutput.Builder.create(this, "CLOUDFRONTDOMAIN").value(distribution.getDistributionDomainName()).build();
 		CfnOutput.Builder.create(this, "USERINFOAPIID").value(userInfoApi.getApiId()).build();
+      CfnOutput.Builder.create(this, "ITEMINFOAPIID").value(itemInfoApi.getRestApiId()).build();
 		CfnOutput.Builder.create(this, "USERINFOGRPHURL").value(userInfoApi.getGraphqlUrl()).build();
 		CfnOutput.Builder.create(this, "ITEMINFOURL").value(itemInfoApi.getUrl()).build();
 		CfnOutput.Builder.create(this, "WEBBUCKET").value(websiteBucket.getBucketArn()).build();
