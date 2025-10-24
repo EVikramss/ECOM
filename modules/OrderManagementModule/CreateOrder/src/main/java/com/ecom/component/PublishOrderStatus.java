@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import com.ecom.common.StatusEnum;
 import com.ecom.entity.OrderData;
 import com.ecom.services.StatisticsService;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -32,7 +33,7 @@ public class PublishOrderStatus {
 	@Value("${OrderStatusTopicARN}")
 	private String topicArn;
 
-	public void publish(OrderData orderData) throws JsonProcessingException {
+	public void publish(OrderData orderData, StatusEnum status) throws JsonProcessingException {
 		String functionName = "PublishOrderStatus.publish";
 
 		// record time
@@ -40,15 +41,15 @@ public class PublishOrderStatus {
 
 		// form status update
 		List<ItemData> itemData = orderData.getItemData().stream().map(i -> {
-			return new ItemData(i.getSku(), i.getQty(), i.getStatus());
+			return new ItemData(i.getSku(), i.getQty(), status.getStatus());
 		}).collect(Collectors.toList());
 
-		OrderStatus status = new OrderStatus(orderData.getOrderNo(), itemData,
+		OrderStatus orderStatus = new OrderStatus(orderData.getOrderNo(), itemData,
 				new CustomerContact(orderData.getCustomerContact().getSub()));
 
 		// convert to json
 		ObjectMapper mapper = new ObjectMapper();
-		String message = mapper.writer().writeValueAsString(status);
+		String message = mapper.writer().writeValueAsString(orderStatus);
 		
 		// post to topic
 		PublishRequest request = PublishRequest.builder().topicArn(topicArn).message(message).build();

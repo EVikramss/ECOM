@@ -89,7 +89,7 @@ public class OrderService {
 			// save order
 			orderData = orderDataRepo.save(orderData);
 			
-			publishOrderStatus.publish(orderData);
+			publishOrderStatus.publish(orderData, StatusEnum.CREATED);
 
 			// get time to execute
 			long durationNanos = sample.stop(meterRegistry.timer(functionName));
