@@ -114,7 +114,7 @@ public class GenerateItemData {
 			String subcategory = getRandomSubCategory(category);
 			double price = getRandomPrice(subcategory);
 			String taxCode = getTaxCodeForSubCategory(subcategory, price);
-			int maxQty = (int) (random.nextDouble() * 11.0);
+			int maxQty = 1 + (int) (random.nextDouble() * 11.0);
 
 			StringBuffer sb = new StringBuffer();
 
