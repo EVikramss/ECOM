@@ -23,7 +23,6 @@ public class OrderItemData {
 	@NotBlank(message = "itemData.desc is required")
 	private String desc;
 	
-	@NotBlank(message = "itemData.price is required")
 	private float price;
 
 	public int getLineno() {
