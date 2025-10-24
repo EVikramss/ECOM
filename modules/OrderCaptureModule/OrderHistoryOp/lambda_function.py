@@ -5,12 +5,12 @@ import zlib
 import base64
 from boto3.dynamodb.types import TypeDeserializer, TypeSerializer
 
-dynamo = boto3.client('dynamodb')
-table_name = os.environ['TABLE_NAME']
-deserializer = TypeDeserializer()
-serializer = TypeSerializer()
-
 def lambda_handler(event, context):
+    dynamo = boto3.client('dynamodb')
+    table_name = os.environ['TABLE_NAME']
+    deserializer = TypeDeserializer()
+    serializer = TypeSerializer()
+
     # Extract SNS message
     message = json.loads(event['Records'][0]['Sns']['Message'])
     sub = message['customerContact']['sub']
@@ -27,9 +27,7 @@ def lambda_handler(event, context):
         'infoType': serializer.serialize('history')
     }
 
-    print("Key:", key)
     response = dynamo.get_item(TableName=table_name, Key=key)
-    print("Response:", response)
 
     if 'Item' not in response:
         # No existing record, insert new
