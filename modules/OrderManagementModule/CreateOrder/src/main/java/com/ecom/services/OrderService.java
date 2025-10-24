@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.ecom.common.StatusEnum;
 import com.ecom.common.Util;
+import com.ecom.component.PublishOrderStatus;
 import com.ecom.entity.OrderData;
 import com.ecom.entity.OrderItemData;
 import com.ecom.entity.OrderStatus;
@@ -34,6 +35,9 @@ public class OrderService {
 
 	@Autowired
 	private StatisticsService statService;
+	
+	@Autowired
+	private PublishOrderStatus publishOrderStatus;
 
 	@Transactional
 	public OrderData createOrder(OrderData orderData) {
@@ -84,6 +88,8 @@ public class OrderService {
 
 			// save order
 			orderData = orderDataRepo.save(orderData);
+			
+			publishOrderStatus.publish(orderData);
 
 			// get time to execute
 			long durationNanos = sample.stop(meterRegistry.timer(functionName));
