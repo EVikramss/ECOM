@@ -43,6 +43,9 @@ public class OrderDataMapper {
 		while(iter.hasNext()) {
 			com.ecom.dto.OrderItemData inputItemData = iter.next();
 			OrderItemData itemData = new OrderItemData();
+			itemData.setDesc(inputItemData.getDesc());
+			itemData.setPrice(inputItemData.getPrice());
+			itemData.setTaxCode(inputItemData.getTaxCode());
 			itemData.setLineno(inputItemData.getLineno());
 			itemData.setQty(inputItemData.getQty());
 			itemData.setStatus(inputItemData.getStatus());
@@ -94,6 +97,9 @@ public class OrderDataMapper {
 			itemData.setQty(inputItemData.getQty());
 			itemData.setStatus(inputItemData.getStatus());
 			itemData.setSku(inputItemData.getSku());
+			itemData.setDesc(inputItemData.getDesc());
+			itemData.setPrice(inputItemData.getPrice());
+			itemData.setTaxCode(inputItemData.getTaxCode());
 			itemDataSet.add(itemData);
 		}
 		

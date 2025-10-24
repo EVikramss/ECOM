@@ -49,6 +49,9 @@ public class OrderDataMapper {
 			itemData.setQty(inputItemData.getQty());
 			itemData.setStatus(inputItemData.getStatus());
 			itemData.setSku(inputItemData.getSku());
+			itemData.setDesc(inputItemData.getDesc());
+			itemData.setPrice(inputItemData.getPrice());
+			itemData.setTaxCode(inputItemData.getTaxCode());
 			itemDataSet.add(itemData);
 		}
 
@@ -96,6 +99,9 @@ public class OrderDataMapper {
 				itemData.setQty(inputItemData.getQty());
 				itemData.setStatus(inputItemData.getStatus());
 				itemData.setSku(inputItemData.getSku());
+				itemData.setDesc(inputItemData.getDesc());
+				itemData.setPrice(inputItemData.getPrice());
+				itemData.setTaxCode(inputItemData.getTaxCode());
 				itemDataSet.add(itemData);
 			}
 
