@@ -326,7 +326,7 @@ public class CdkStack extends Stack {
 		Map<String, String> envVariables;
 		if ("CreateOrder".equals(jobName)) {
 			envVariables = Map.of("DBPRX_EP", dbCluster.getClusterEndpoint().getHostname(), "CreateOrderQURL",
-					createOrderQ.getQueueUrl());
+					createOrderQ.getQueueUrl(), "OrderStatusTopicARN", System.getenv("OSUTOPICARN"));
 			secrets = Map.of("SECRET", Secret.fromSecretsManager(dbSecret));
 		} else if ("GetData".equals(jobName)) {
 			envVariables = Map.of("DBPRX_EP", dbCluster.getClusterEndpoint().getHostname(), "INVDB_EP",
@@ -338,7 +338,7 @@ public class CdkStack extends Stack {
 				secrets = Map.of("SECRET", Secret.fromSecretsManager(dbSecret));
 			}
 		} else {
-			envVariables = Map.of("DBPRX_EP", dbCluster.getClusterEndpoint().getHostname());
+			envVariables = Map.of("DBPRX_EP", dbCluster.getClusterEndpoint().getHostname(), "OrderStatusTopicARN", System.getenv("OSUTOPICARN"));
 			secrets = Map.of("SECRET", Secret.fromSecretsManager(dbSecret));
 		}
 
