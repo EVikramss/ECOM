@@ -39,11 +39,11 @@ public class PublishOrderStatus {
 		Timer.Sample sample = Timer.start(meterRegistry);
 
 		// form status update
-		List<ItemData> itemDataList = orderData.getItemData().stream().map(i -> {
+		List<ItemData> itemData = orderData.getItemData().stream().map(i -> {
 			return new ItemData(i.getSku(), i.getQty(), i.getStatus());
 		}).collect(Collectors.toList());
 
-		OrderStatus status = new OrderStatus(orderData.getOrderNo(), itemDataList,
+		OrderStatus status = new OrderStatus(orderData.getOrderNo(), itemData,
 				new CustomerContact(orderData.getCustomerContact().getSub()));
 
 		// convert to json
@@ -63,7 +63,7 @@ public class PublishOrderStatus {
 	record CustomerContact(String sub) {
 	}
 
-	record OrderStatus(String orderNo, List<ItemData> itemDataList, CustomerContact customerContact) {
+	record OrderStatus(String orderNo, List<ItemData> itemData, CustomerContact customerContact) {
 	}
 
 	record ItemData(String sku, int qty, int status) {
