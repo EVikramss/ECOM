@@ -94,7 +94,7 @@ function orderDetail() {
                         </div>
                         <div className="lineSpacing"></div>
                         <div>
-                            <p><strong>Name:</strong> {orderData.customerContact.salutation} {orderData.customerContact.firstName} {orderData.customerContact.lastName}</p>
+                            <p><strong>Name:</strong> {orderData.customerContact.fullName}</p>
                             <p><strong>Phone:</strong> {orderData.customerContact.phone}</p>
                             <p><strong>Email:</strong> {orderData.customerContact.email}</p>
                         </div>
