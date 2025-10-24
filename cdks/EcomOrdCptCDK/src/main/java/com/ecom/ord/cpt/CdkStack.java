@@ -237,7 +237,7 @@ public class CdkStack extends Stack {
 	private void createSNSBackedAPI() {
 		// create sns topic with Q as subscriber
 		createOrderTopic = Topic.Builder.create(this, "CreateOrderTopic").topicName("CreateOrderTopic").build();
-		createOrderTopic.addSubscription(new SqsSubscription(createOrderQ));
+		createOrderTopic.addSubscription(SqsSubscription.Builder.create(createOrderQ).rawMessageDelivery(true).build());
 
 		// similar to
 		// https://docs.aws.amazon.com/prescriptive-guidance/latest/patterns/integrate-amazon-api-gateway-with-amazon-sqs-to-handle-asynchronous-rest-apis.html
@@ -300,10 +300,7 @@ public class CdkStack extends Stack {
 		distribution = new Distribution(this, "OrderCapDistribution",
 				DistributionProps.builder().defaultRootObject("index.html")
 						.defaultBehavior(software.amazon.awscdk.services.cloudfront.BehaviorOptions.builder()
-								.origin(s3BucketOrigin).cachePolicy(CachePolicy.CACHING_DISABLED) // change to
-																									// enabled
-																									// later on
-																									// ***
+								.origin(s3BucketOrigin).cachePolicy(CachePolicy.CACHING_OPTIMIZED)
 								.viewerProtocolPolicy(ViewerProtocolPolicy.REDIRECT_TO_HTTPS).build())
 						.build());
 	}

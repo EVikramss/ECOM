@@ -16,6 +16,21 @@ function OrderHistory() {
         setSelectedOrder(orderNo === selectedOrder ? null : orderNo);
     };
 
+    const convertStatusToDesc = (intStatus) => {
+        let desc = "Pending";
+        if (intStatus == 0) {
+            desc = "Created";
+        } else if (intStatus == 1) {
+            desc = "Scheduled";
+        } else if (intStatus == 2) {
+            desc = "Shipped";
+        } else if (intStatus == 3) {
+            desc = "Cancelled";
+        }
+
+        return desc;
+    }
+
     useEffect(() => {
         dispatch(beginApiCall());
         getOrderHistory(auth).then(response => {
@@ -51,7 +66,7 @@ function OrderHistory() {
                                             <div key={index} className="text-gray-700">
                                                 <p>SKU: {item.sku}</p>
                                                 <p>Quantity: {item.qty}</p>
-                                                <p>Status: {item.status}</p>
+                                                <p>Status: {convertStatusToDesc(item.status)}</p>
                                             </div>
                                         ))}
                                     </div>

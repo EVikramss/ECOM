@@ -154,7 +154,7 @@ public class CdkStack extends Stack {
 				SecurityGroupProps.builder().vpc(vpc).allowAllOutbound(true).build());
 		asg = AutoScalingGroup.Builder.create(this, "ECOMECSASG").vpc(vpc)
 				.instanceType(InstanceType.of(InstanceClass.BURSTABLE3, InstanceSize.MEDIUM))
-				.machineImage(EcsOptimizedImage.amazonLinux2()).minCapacity(2).maxCapacity(4).securityGroup(asgsg)
+				.machineImage(EcsOptimizedImage.amazonLinux2()).minCapacity(4).maxCapacity(4).securityGroup(asgsg)
 				.vpcSubnets(SubnetSelection.builder().subnets(subPrivateSubnets).build())
 				.associatePublicIpAddress(false).build();
 
