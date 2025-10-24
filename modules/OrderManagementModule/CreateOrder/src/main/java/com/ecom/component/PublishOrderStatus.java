@@ -44,14 +44,12 @@ public class PublishOrderStatus {
 		}).collect(Collectors.toList());
 
 		OrderStatus status = new OrderStatus(orderData.getOrderNo(), itemDataList,
-				orderData.getCustomerContact().getSub());
+				new CustomerContact(orderData.getCustomerContact().getSub()));
 
 		// convert to json
 		ObjectMapper mapper = new ObjectMapper();
 		String message = mapper.writer().writeValueAsString(status);
 		
-		System.out.println(topicArn);
-
 		// post to topic
 		PublishRequest request = PublishRequest.builder().topicArn(topicArn).message(message).build();
 		snsClient.publish(request);
@@ -61,8 +59,11 @@ public class PublishOrderStatus {
 		long durationMillis = durationNanos / 1_000_000;
 		statService.logStat(functionName, durationMillis);
 	}
+	
+	record CustomerContact(String sub) {
+	}
 
-	record OrderStatus(String orderNo, List<ItemData> itemDataList, String sub) {
+	record OrderStatus(String orderNo, List<ItemData> itemDataList, CustomerContact customerContact) {
 	}
 
 	record ItemData(String sku, int qty, int status) {
