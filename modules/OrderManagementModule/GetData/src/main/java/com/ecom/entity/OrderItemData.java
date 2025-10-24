@@ -1,55 +1,29 @@
-package com.ecom.entity;
+package com.ecom.dto;
 
-import java.math.BigInteger;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
-
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-
-@Entity
 public class OrderItemData {
 
-	@Id
-	@Column(length = 32)
-	private BigInteger orderItemKey;
-
-	@Column(nullable = false)
 	private int lineno;
 
-	@Column(nullable = false)
 	private int status;
 
-	@Column(nullable = false)
+	@NotNull(message = "itemData.qty is required")
+	@Min(1)
 	private int qty;
 
-	@Column(length = 40, nullable = false)
+	@NotBlank(message = "itemData.sku is required")
 	private String sku;
 	
-	@Column(length = 5, nullable = false)
+	@NotBlank(message = "itemData.taxCode is required")
 	private String taxCode;
 	
-	@Column(name = "descr", length = 80, nullable = false)
+	@NotBlank(message = "itemData.desc is required")
 	private String desc;
 	
-	@Column(precision = 3, nullable = false)
 	private float price;
-
-	@ManyToOne
-	@JsonBackReference
-	@JoinColumn(name = "order_key")
-	private OrderData orderData;
-
-	public BigInteger getOrderItemKey() {
-		return orderItemKey;
-	}
-
-	public void setOrderItemKey(BigInteger orderItemKey) {
-		this.orderItemKey = orderItemKey;
-	}
 
 	public int getLineno() {
 		return lineno;
@@ -81,14 +55,6 @@ public class OrderItemData {
 
 	public void setSku(String sku) {
 		this.sku = sku;
-	}
-
-	public OrderData getOrderData() {
-		return orderData;
-	}
-
-	public void setOrderData(OrderData orderData) {
-		this.orderData = orderData;
 	}
 
 	public String getTaxCode() {

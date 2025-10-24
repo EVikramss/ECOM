@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.ecom.common.StatusEnum;
+import com.ecom.component.PublishOrderStatus;
 import com.ecom.entity.OrderData;
 import com.ecom.entity.OrderItemData;
 import com.ecom.entity.OrderStatus;
@@ -34,6 +35,9 @@ public class ShipOrder {
 
 	@Autowired
 	private StatisticsService statService;
+	
+	@Autowired
+	private PublishOrderStatus publishOrderStatus;
 
 	@Transactional
 	public void executeOrder(OrderStatus w) throws Exception {
@@ -69,6 +73,9 @@ public class ShipOrder {
 		
 		orderData.getOrderStatus().setStatus(StatusEnum.SHIPPED.getStatus());
 		orderDataRepo.save(orderData);
+		
+		// publish order status
+		publishOrderStatus.publish(orderData);
 
 		// get time to execute
 		long durationNanos = sample.stop(meterRegistry.timer(functionName));

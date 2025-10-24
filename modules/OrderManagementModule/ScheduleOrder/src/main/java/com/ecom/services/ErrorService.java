@@ -59,6 +59,9 @@ public class ErrorService {
 		if (stackTrace.length() >= 2048)
 			stackTrace = stackTrace.substring(0, 2048);
 
+		if (exceptionMsg.length() >= 512)
+			exceptionMsg = exceptionMsg.substring(0, 512);
+
 		ServiceError error = new ServiceError();
 		error.setDate(date);
 		error.setErrorKey(Util.generateKey());

@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.ecom.common.EntityNode;
 import com.ecom.common.StatusEnum;
+import com.ecom.component.PublishOrderStatus;
 import com.ecom.entity.OrderData;
 import com.ecom.entity.OrderItemData;
 import com.ecom.entity.OrderStatus;
@@ -47,6 +48,9 @@ public class ScheduleOrder {
 
 	@Autowired
 	private StatisticsService statService;
+	
+	@Autowired
+	private PublishOrderStatus publishOrderStatus;
 
 	/**
 	 * In a transaction, attempt to reserve all items one by one. 1. Move the items
@@ -112,6 +116,9 @@ public class ScheduleOrder {
 		else
 			orderData.getOrderStatus().setStatus(StatusEnum.CANCELLED.getStatus());
 		orderDataRepo.save(orderData);
+		
+		// publish status update to sns queue
+		publishOrderStatus.publish(orderData);
 
 		// get time to execute
 		long durationNanos = sample.stop(meterRegistry.timer(functionName));

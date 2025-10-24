@@ -32,7 +32,7 @@ public class OrderItemData {
 	@Column(length = 5, nullable = false)
 	private String taxCode;
 	
-	@Column(name = "descr",  length = 80, nullable = false)
+	@Column(name = "descr", length = 80, nullable = false)
 	private String desc;
 	
 	@Column(precision = 3, nullable = false)
