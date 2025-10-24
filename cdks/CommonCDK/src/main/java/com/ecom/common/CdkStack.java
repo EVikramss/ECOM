@@ -112,8 +112,7 @@ public class CdkStack extends Stack {
 
 	private void setupSNS() {
 		orderStatusUpdatesTopic = Topic.Builder.create(this, "OrderStatusUpdates").topicName("OrderStatusUpdates")
-				.fifo(true)
-				.messageRetentionPeriodInDays(1)
+				.fifo(false)
 				.build();
 	}
 

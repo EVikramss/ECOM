@@ -17,12 +17,14 @@ aws apigateway update-integration-response --rest-api-id "$SNSAPIID" --resource-
 resourceID=$(aws apigateway get-resources --rest-api-id "$ITEMINFOAPIID" | jq -r '.items[] | select(.path == "/info") | .id')
 aws apigateway update-integration-response --rest-api-id "$ITEMINFOAPIID" --resource-id "$resourceID" --http-method GET --status-code 200 --patch-operations op=replace,path=/responseParameters/method.response.header.Access-Control-Allow-Origin,value="\"'$domain_url'\""
 
-# deploy changes
-aws apigateway create-deployment --rest-api-id "$SNSAPIID" --stage-name prod
-aws apigateway create-deployment --rest-api-id "$ITEMINFOAPIID" --stage-name prod
-
 # subscribe history lambda to status q
 OSUTOPICARN=$(aws cloudformation describe-stacks --stack-name COMMON --query "Stacks[0].Outputs[?OutputKey=='OSUTOPICARN'].OutputValue" --output text)
 orderHistoryARN=$(aws lambda get-function --function-name ECOMORDCPTOrderHistoryOp --query 'Configuration.FunctionArn' --output text)
 
 aws sns subscribe --topic-arn "$OSUTOPICARN" --protocol lambda --notification-endpoint "$orderHistoryARN"
+
+
+sleep 10
+# deploy changes
+aws apigateway create-deployment --rest-api-id "$SNSAPIID" --stage-name prod
+aws apigateway create-deployment --rest-api-id "$ITEMINFOAPIID" --stage-name prod
