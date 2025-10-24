@@ -23,6 +23,7 @@ orderHistoryARN=$(aws lambda get-function --function-name ECOMORDCPTOrderHistory
 
 aws sns subscribe --topic-arn "$OSUTOPICARN" --protocol lambda --notification-endpoint "$orderHistoryARN"
 
+aws lambda add-permission --function-name ECOMORDCPTOrderHistoryOp --statement-id sns-invoke --action "lambda:InvokeFunction" --principal sns.amazonaws.com --source-arn "$OSUTOPICARN"
 
 sleep 10
 # deploy changes

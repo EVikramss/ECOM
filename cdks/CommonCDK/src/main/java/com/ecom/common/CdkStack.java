@@ -210,6 +210,10 @@ public class CdkStack extends Stack {
 		InterfaceVpcEndpoint sqsEndpoint = InterfaceVpcEndpoint.Builder.create(this, "ECSSqsInterfaceEndpoint").vpc(vpc)
 				.service(InterfaceVpcEndpointAwsService.SQS).privateDnsEnabled(true).securityGroups(List.of(ecsepsg))
 				.open(true).subnets(SubnetSelection.builder().subnets(subPrivateSubnets).build()).build();
+		
+		InterfaceVpcEndpoint snsEndpoint = InterfaceVpcEndpoint.Builder.create(this, "ECSSnsInterfaceEndpoint").vpc(vpc)
+				.service(InterfaceVpcEndpointAwsService.SNS).privateDnsEnabled(true).securityGroups(List.of(ecsepsg))
+				.open(true).subnets(SubnetSelection.builder().subnets(subPrivateSubnets).build()).build();
 
 		// need s3 endpoint to pull image from ecr
 		GatewayVpcEndpoint s3Endpoint = GatewayVpcEndpoint.Builder.create(this, "S3GatewayEndpoint").vpc(vpc)

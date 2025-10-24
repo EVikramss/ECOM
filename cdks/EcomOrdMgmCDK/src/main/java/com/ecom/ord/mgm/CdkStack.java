@@ -300,15 +300,18 @@ public class CdkStack extends Stack {
 		if ("CreateOrder".equals(jobName)) {
 			taskPolicies = List.of(ManagedPolicy.fromAwsManagedPolicyName("SecretsManagerReadWrite"),
 					ManagedPolicy.fromAwsManagedPolicyName("AmazonRDSDataFullAccess"),
-					ManagedPolicy.fromAwsManagedPolicyName("AmazonSQSFullAccess"));
+					ManagedPolicy.fromAwsManagedPolicyName("AmazonSQSFullAccess"),
+					ManagedPolicy.fromAwsManagedPolicyName("AmazonSNSFullAccess"));
 		} else if ("ScheduleOrder".equals(jobName)) {
 			taskPolicies = List.of(ManagedPolicy.fromAwsManagedPolicyName("SecretsManagerReadWrite"),
 					ManagedPolicy.fromAwsManagedPolicyName("AmazonRDSDataFullAccess"),
 					ManagedPolicy.fromAwsManagedPolicyName("AmazonSQSFullAccess"),
-					ManagedPolicy.fromAwsManagedPolicyName("AWSLambda_FullAccess"));
+					ManagedPolicy.fromAwsManagedPolicyName("AWSLambda_FullAccess"),
+					ManagedPolicy.fromAwsManagedPolicyName("AmazonSNSFullAccess"));
 		} else {
 			taskPolicies = List.of(ManagedPolicy.fromAwsManagedPolicyName("SecretsManagerReadWrite"),
-					ManagedPolicy.fromAwsManagedPolicyName("AmazonRDSDataFullAccess"));
+					ManagedPolicy.fromAwsManagedPolicyName("AmazonRDSDataFullAccess"),
+					ManagedPolicy.fromAwsManagedPolicyName("AmazonSNSFullAccess"));
 		}
 		Role taskRole = Role.Builder.create(this, jobName + "TskRole")
 				.assumedBy(new ServicePrincipal("ecs-tasks.amazonaws.com")).managedPolicies(taskPolicies).build();
