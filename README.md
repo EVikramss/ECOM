@@ -13,4 +13,7 @@ This project is completely automated using Jenkins build for CI/CD. Architecture
 
 ![ECOM](docs/ECOM.jpg)
 
+----------------------------
+Build system Architecture
+
 ![ECOM](docs/BuildBox.jpg)
