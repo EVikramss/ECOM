@@ -9,6 +9,8 @@ nohup ./setupBuildEnv.sh &
 tail -f nohup.out
 ```
 
-This project is completely automated using Jenkins build for CI/CD. Architecture for the build and application is shown below.
+This project is completely automated using Jenkins build for CI/CD. Architecture for the application & build systems is shown below.
 
-![ECOM](data/ECOM.jpg)
+![ECOM](docs/ECOM.jpg)
+
+![ECOM](docs/BuildBox.jpg)
