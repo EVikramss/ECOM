@@ -47,6 +47,7 @@ import software.amazon.awscdk.services.appsync.GraphqlApi;
 import software.amazon.awscdk.services.appsync.NoneDataSource;
 import software.amazon.awscdk.services.appsync.Resolver;
 import software.amazon.awscdk.services.appsync.UserPoolConfig;
+import software.amazon.awscdk.services.cloudfront.AllowedMethods;
 import software.amazon.awscdk.services.cloudfront.CachePolicy;
 import software.amazon.awscdk.services.cloudfront.CacheQueryStringBehavior;
 import software.amazon.awscdk.services.cloudfront.Distribution;
@@ -191,25 +192,36 @@ public class CdkStack extends Stack {
 		createSNSBackedAPI();
 		setupECSJobs(baseDir);
 		exposeECSWithHttpApi();
-		setupLambda("OrderHistoryOp", baseDir);
+		setupLambda("OrderHistoryOp", baseDir, false);
 
 		// record output variables
 		setupOutputVariables();
 	}
 
-	private void setupLambda(String lambdaName, String baseDir) {
+	private void setupLambda(String lambdaName, String baseDir, boolean isPrivate) {
 
 		String relLambdaName = stackName + lambdaName;
+		Function function = null;
 
-		SecurityGroup sg = new SecurityGroup(stack, relLambdaName + "SecurityGroup",
-				SecurityGroupProps.builder().allowAllOutbound(true).vpc(vpc).build());
+		if (isPrivate) {
+			SecurityGroup sg = new SecurityGroup(stack, relLambdaName + "SecurityGroup",
+					SecurityGroupProps.builder().allowAllOutbound(true).vpc(vpc).build());
 
-		Function function = Function.Builder.create(this, relLambdaName).runtime(Runtime.PYTHON_3_11)
-				.functionName(relLambdaName)
-				.code(software.amazon.awscdk.services.lambda.Code.fromAsset(baseDir + lambdaName + ".zip"))
-				.handler("lambda_function.lambda_handler").securityGroups(Arrays.asList(sg)).vpc(vpc)
-				.environment(Map.of("TABLE_NAME", userInfoTable.getTableName())).build();
-		//function.getRole().addManagedPolicy(ManagedPolicy.fromAwsManagedPolicyName("AmazonDynamoDBFullAccess")); // to be restricted
+			function = Function.Builder.create(this, relLambdaName).runtime(Runtime.PYTHON_3_11)
+					.functionName(relLambdaName)
+					.code(software.amazon.awscdk.services.lambda.Code.fromAsset(baseDir + lambdaName + ".zip"))
+					.handler("lambda_function.lambda_handler").securityGroups(Arrays.asList(sg)).vpc(vpc)
+					.environment(Map.of("TABLE_NAME", userInfoTable.getTableName())).build();
+		} else {
+			function = Function.Builder.create(this, relLambdaName).runtime(Runtime.PYTHON_3_11)
+					.functionName(relLambdaName)
+					.code(software.amazon.awscdk.services.lambda.Code.fromAsset(baseDir + lambdaName + ".zip"))
+					.handler("lambda_function.lambda_handler")
+					.environment(Map.of("TABLE_NAME", userInfoTable.getTableName())).build();
+		}
+
+		// function.getRole().addManagedPolicy(ManagedPolicy.fromAwsManagedPolicyName("AmazonDynamoDBFullAccess"));
+		// // to be restricted
 
 		// need to update lambda function to read
 		userInfoTable.grantReadWriteData(function.getRole());
@@ -230,7 +242,7 @@ public class CdkStack extends Stack {
 		// use same lambda for status updates as well
 		if (orderStatusUpdatesTopic != null) {
 			orderStatusUpdatesTopic.grantSubscribe(function);
-			//orderStatusUpdatesTopic.addSubscription(new LambdaSubscription(function));
+			// orderStatusUpdatesTopic.addSubscription(new LambdaSubscription(function));
 		}
 	}
 
@@ -325,7 +337,8 @@ public class CdkStack extends Stack {
 				.generateSecret(false).authFlows(AuthFlow.builder().userPassword(true).build())
 				.accessTokenValidity(Duration.hours(1))
 				.oAuth(OAuthSettings.builder().flows(OAuthFlows.builder().authorizationCodeGrant(true).build())
-						.scopes(List.of(OAuthScope.EMAIL, OAuthScope.OPENID, OAuthScope.PROFILE)).callbackUrls(List.of("https://")).build())
+						.scopes(List.of(OAuthScope.EMAIL, OAuthScope.OPENID, OAuthScope.PROFILE))
+						.callbackUrls(List.of("https://")).build())
 				.build();
 
 		CfnUserPoolClient cfnClient = (CfnUserPoolClient) userPoolClient.getNode().getDefaultChild();
@@ -510,7 +523,7 @@ public class CdkStack extends Stack {
 		HttpOrigin origin = HttpOrigin.Builder.create(Fn.select(2, Fn.split("/", userInfoApi.getGraphqlUrl()))).build();
 		distribution.addBehavior("/graphql", origin,
 				software.amazon.awscdk.services.cloudfront.BehaviorOptions.builder().origin(origin)
-						.cachePolicy(CachePolicy.CACHING_DISABLED)
+						.allowedMethods(AllowedMethods.ALLOW_ALL).cachePolicy(CachePolicy.CACHING_DISABLED)
 						.viewerProtocolPolicy(ViewerProtocolPolicy.REDIRECT_TO_HTTPS).build());
 	}
 
@@ -678,7 +691,7 @@ public class CdkStack extends Stack {
 		CfnOutput.Builder.create(this, "CLOUDFRONTID").value(distribution.getDistributionId()).build();
 		CfnOutput.Builder.create(this, "CLOUDFRONTDOMAIN").value(distribution.getDistributionDomainName()).build();
 		CfnOutput.Builder.create(this, "USERINFOAPIID").value(userInfoApi.getApiId()).build();
-      CfnOutput.Builder.create(this, "ITEMINFOAPIID").value(itemInfoApi.getRestApiId()).build();
+		CfnOutput.Builder.create(this, "ITEMINFOAPIID").value(itemInfoApi.getRestApiId()).build();
 		CfnOutput.Builder.create(this, "USERINFOGRPHURL").value(userInfoApi.getGraphqlUrl()).build();
 		CfnOutput.Builder.create(this, "ITEMINFOURL").value(itemInfoApi.getUrl()).build();
 		CfnOutput.Builder.create(this, "WEBBUCKET").value(websiteBucket.getBucketArn()).build();
