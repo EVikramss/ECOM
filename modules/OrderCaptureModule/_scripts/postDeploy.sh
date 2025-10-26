@@ -28,4 +28,5 @@ aws lambda add-permission --function-name ECOMORDCPTOrderHistoryOp --statement-i
 sleep 10
 # deploy changes
 aws apigateway create-deployment --rest-api-id "$SNSAPIID" --stage-name prod
+sleep 10
 aws apigateway create-deployment --rest-api-id "$ITEMINFOAPIID" --stage-name prod
